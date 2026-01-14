@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { PhotoGroup, SelectionState } from '../types';
 import { formatSize } from '../utils/fileHelpers';
-import { decodeRawFile, isRawExtension } from '../utils/rawLoader';
+import { decodeRawFile } from '../utils/rawLoader';
 
 interface ViewerProps {
   group: PhotoGroup;

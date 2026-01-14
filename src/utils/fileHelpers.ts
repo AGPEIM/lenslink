@@ -73,7 +73,7 @@ export const groupFiles = async (files: File[]): Promise<PhotoGroup[]> => {
   });
 };
 
-export const mockExif = (name: string): ExifData => {
+export const mockExif = (_name: string): ExifData => {
   const shutters = ['1/100', '1/250', '1/1000', '1/4000', '1/60'];
   const apertures = ['f/1.8', 'f/2.8', 'f/4', 'f/8', 'f/11'];
   const isos = ['100', '400', '800', '1600', '3200'];

@@ -405,13 +405,143 @@ fn move_to_trash(groups: Vec<PhotoGroupInfo>) -> Result<Vec<String>, String> {
     }
 }
 
+#[tauri::command]
+fn export_files(
+    groups: Vec<PhotoGroupInfo>,
+    export_mode: String,
+    operation: String,
+    destination_folder: String,
+) -> Result<Vec<String>, String> {
+    let dest_path = Path::new(&destination_folder);
+    
+    if !dest_path.exists() {
+        return Err("Destination folder does not exist".to_string());
+    }
+    
+    if !dest_path.is_dir() {
+        return Err("Destination path is not a directory".to_string());
+    }
+    
+    let mut processed_files = Vec::new();
+    let mut failed_files = Vec::new();
+    
+    for group in groups {
+        // Determine which files to export based on export_mode
+        let files_to_export: Vec<&PhotoFileInfo> = match export_mode.as_str() {
+            "JPG" => {
+                if let Some(ref jpg) = group.jpg {
+                    vec![jpg]
+                } else {
+                    continue;
+                }
+            }
+            "RAW" => {
+                if let Some(ref raw) = group.raw {
+                    vec![raw]
+                } else {
+                    continue;
+                }
+            }
+            "BOTH" => {
+                let mut files = Vec::new();
+                if let Some(ref jpg) = group.jpg {
+                    files.push(jpg);
+                }
+                if let Some(ref raw) = group.raw {
+                    files.push(raw);
+                }
+                if files.is_empty() {
+                    continue;
+                }
+                files
+            }
+            _ => {
+                failed_files.push(format!("Unknown export mode: {}", export_mode));
+                continue;
+            }
+        };
+        
+        // Process each file
+        for file_info in files_to_export {
+            let source_path = Path::new(&file_info.path);
+            
+            if !source_path.exists() {
+                failed_files.push(format!("Source file not found: {}", file_info.path));
+                continue;
+            }
+            
+            let file_name = source_path.file_name()
+                .and_then(|n| n.to_str())
+                .ok_or_else(|| format!("Invalid file name: {}", file_info.path))?;
+            
+            let dest_file_path = dest_path.join(file_name);
+            
+            // Check if destination file already exists
+            if dest_file_path.exists() {
+                failed_files.push(format!(
+                    "Destination file already exists: {}",
+                    dest_file_path.display()
+                ));
+                continue;
+            }
+            
+            // Perform the operation (copy or move)
+            let result = match operation.as_str() {
+                "COPY" => fs::copy(source_path, &dest_file_path)
+                    .map(|_| ())
+                    .map_err(|e| format!("Failed to copy {}: {}", file_name, e)),
+                "MOVE" => fs::rename(source_path, &dest_file_path)
+                    .map_err(|e| format!("Failed to move {}: {}", file_name, e)),
+                _ => Err(format!("Unknown operation: {}", operation)),
+            };
+            
+            match result {
+                Ok(_) => {
+                    processed_files.push(format!(
+                        "{} {} to {}",
+                        if operation == "COPY" { "Copied" } else { "Moved" },
+                        file_name,
+                        dest_file_path.display()
+                    ));
+                }
+                Err(e) => {
+                    failed_files.push(e);
+                }
+            }
+        }
+    }
+    
+    if !failed_files.is_empty() {
+        Err(format!(
+            "Export completed with errors:\n{}\n\nSuccessfully processed {} files",
+            failed_files.join("\n"),
+            processed_files.len()
+        ))
+    } else if processed_files.is_empty() {
+        Err("No files were exported".to_string())
+    } else {
+        Ok(processed_files)
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_window_state::Builder::default().build())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
-        .invoke_handler(tauri::generate_handler![greet, read_exif, scan_folder, scan_files, move_to_trash])
+        .invoke_handler(tauri::generate_handler![greet, read_exif, scan_folder, scan_files, move_to_trash, export_files])
+        .setup(|app| {
+            // Ensure window decorations are disabled at runtime
+            #[cfg(desktop)]
+            {
+                use tauri::Manager;
+                let window = app.get_webview_window("main").unwrap();
+                window.set_decorations(false).unwrap();
+            }
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

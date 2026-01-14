@@ -12,6 +12,12 @@
     "core:event:default",
     "core:webview:allow-set-webview-zoom",
     "core:webview:allow-webview-position",
-    "core:webview:allow-webview-size"
+    "core:webview:allow-webview-size",
+    "core:window:allow-minimize",
+    "core:window:allow-maximize",
+    "core:window:allow-unmaximize",
+    "core:window:allow-close",
+    "core:window:allow-is-maximized",
+    "window-state:default"
   ]
 }

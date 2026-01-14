@@ -111,19 +111,21 @@ export async function decodeRawFile(filePath: string, thumbnail: boolean = false
     
     // For thumbnails, create a smaller canvas
     const t7 = performance.now();
-    let canvasWidth = width;
-    let canvasHeight = height;
     
     if (thumbnail) {
       // Scale down to filmstrip size (max 320px width)
       const maxWidth = 320;
       if (width > maxWidth) {
         const scale = maxWidth / width;
-        canvasWidth = maxWidth;
-        canvasHeight = Math.round(height * scale);
+        const canvasWidth = maxWidth;
+        const canvasHeight = Math.round(height * scale);
+        console.log(`[RAW] 7. Calculate dimensions: ${(performance.now() - t7).toFixed(1)}ms - ${canvasWidth}x${canvasHeight}`);
+      } else {
+        console.log(`[RAW] 7. Calculate dimensions: ${(performance.now() - t7).toFixed(1)}ms - ${width}x${height}`);
       }
+    } else {
+      console.log(`[RAW] 7. Calculate dimensions: ${(performance.now() - t7).toFixed(1)}ms - ${width}x${height}`);
     }
-    console.log(`[RAW] 7. Calculate dimensions: ${(performance.now() - t7).toFixed(1)}ms - ${width}x${height}`);
     
     // Create canvas for full-size image
     const t8 = performance.now();

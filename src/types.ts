@@ -40,3 +40,4 @@ export interface PhotoGroup {
 }
 
 export type ExportMode = 'RAW' | 'JPG' | 'BOTH';
+export type ExportOperation = 'COPY' | 'MOVE';

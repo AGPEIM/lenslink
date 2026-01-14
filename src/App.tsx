@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { PhotoGroup, SelectionState, GroupStatus, ExportMode } from './types';
+import { PhotoGroup, SelectionState, GroupStatus, ExportMode, ExportOperation } from './types';
 import { analyzeSession } from './services/geminiService';
 import Viewer from './components/Viewer';
 import ConfirmationModal from './components/ConfirmationModal';
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
 import { convertFileSrc } from '@tauri-apps/api/core';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import { decodeRawFile } from './utils/rawLoader';
 
 const App: React.FC = () => {
@@ -22,10 +23,32 @@ const App: React.FC = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showExportConfirm, setShowExportConfirm] = useState(false);
   const [exportMode, setExportMode] = useState<ExportMode>('BOTH');
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
   const filmstripRef = useRef<HTMLDivElement>(null);
+
+  // Window controls
+  const appWindow = getCurrentWindow();
+
+  const handleMinimize = () => {
+    appWindow.minimize();
+  };
+
+  const handleMaximize = async () => {
+    const isMaximized = await appWindow.isMaximized();
+    if (isMaximized) {
+      appWindow.unmaximize();
+    } else {
+      appWindow.maximize();
+    }
+  };
+
+  const handleClose = () => {
+    appWindow.close();
+  };
 
   // Thumbnail component for lazy loading RAW previews
   const ThumbnailImage: React.FC<{ group: PhotoGroup }> = ({ group }) => {
@@ -253,7 +276,7 @@ const App: React.FC = () => {
     }
   };
 
-  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImport = async (_e: React.ChangeEvent<HTMLInputElement>) => {
     // 保留原有的HTML文件输入作为备用
     alert('请使用 "Import Folder" 按钮选择文件夹');
   };
@@ -358,19 +381,75 @@ const App: React.FC = () => {
     setShowExportConfirm(true);
   };
 
-  const executeExport = async () => {
-    try {
-      // In a modern browser, we use the File System Access API
-      if ('showDirectoryPicker' in window) {
-        const handle = await (window as any).showDirectoryPicker();
-        alert(`Export successful! Successfully "simulated" copy to ${handle.name}. In a real desktop app, files would be physically moved.`);
-      } else {
-        alert(`Exporting ${stats.picked} groups to local storage. (Standard browser fallback)`);
-      }
-    } catch (e) {
-      console.warn("Export cancelled or failed:", e);
+  const executeExport = async (operation?: ExportOperation) => {
+    if (!operation) {
+      setShowExportConfirm(false);
+      return;
     }
-    setShowExportConfirm(false);
+
+    try {
+      // 使用 Tauri 的文件对话框选择目标文件夹
+      const destinationFolder = await open({
+        directory: true,
+        multiple: false,
+        title: `Select folder to ${operation === 'COPY' ? 'copy' : 'move'} files to`,
+      });
+      
+      if (!destinationFolder || typeof destinationFolder !== 'string') {
+        setShowExportConfirm(false);
+        return; // 用户取消
+      }
+      
+      // 获取要导出的组
+      const pickedGroups = photos.filter(p => p.selection === SelectionState.PICKED);
+      
+      if (pickedGroups.length === 0) {
+        alert("No photos are picked for export.");
+        setShowExportConfirm(false);
+        return;
+      }
+      
+      // 将组转换为 Rust 可接受的格式
+      const groupsToExport = pickedGroups.map(group => ({
+        id: group.id,
+        jpg: group.jpg ? {
+          name: group.jpg.name,
+          extension: group.jpg.extension,
+          path: group.jpg.path,
+          size: group.jpg.size
+        } : null,
+        raw: group.raw ? {
+          name: group.raw.name,
+          extension: group.raw.extension,
+          path: group.raw.path,
+          size: group.raw.size
+        } : null,
+        status: group.status,
+        exif: group.exif || null
+      }));
+      
+      // 调用 Rust 导出命令
+      const exportedFiles = await invoke<string[]>('export_files', {
+        groups: groupsToExport,
+        exportMode: exportMode,
+        operation: operation,
+        destinationFolder: destinationFolder
+      });
+      
+      // 如果是移动操作，需要从当前列表中移除这些照片
+      if (operation === 'MOVE') {
+        setPhotos(prev => prev.filter(p => p.selection !== SelectionState.PICKED));
+        setSelectedIndex(photos.length > pickedGroups.length ? 0 : null);
+      }
+      
+      setShowExportConfirm(false);
+      alert(`Successfully ${operation === 'COPY' ? 'copied' : 'moved'} ${exportedFiles.length} files to ${destinationFolder}`);
+      console.log(`Export completed:`, exportedFiles);
+    } catch (error) {
+      console.error('Failed to export files:', error);
+      alert(`Export failed: ${error}`);
+      setShowExportConfirm(false);
+    }
   };
 
   const getAiInsight = async () => {
@@ -409,19 +488,35 @@ const App: React.FC = () => {
     }
   }, [selectedIndex]);
 
+  // Close export menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(event.target as Node)) {
+        setShowExportMenu(false);
+      }
+    };
+
+    if (showExportMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showExportMenu]);
+
   return (
     <div className="flex flex-col h-screen bg-zinc-950 select-none">
       {/* Top Nav */}
-      <nav className="h-14 border-b border-zinc-800 bg-zinc-900/80 backdrop-blur-md flex items-center justify-between px-6 z-20">
+      <nav className="h-14 border-b border-zinc-800 bg-zinc-900/80 backdrop-blur-md flex items-center justify-between px-6 z-20" data-tauri-drag-region>
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center rotate-3 shadow-lg shadow-indigo-500/20">
+            <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center rotate-3 shadow-lg shadow-indigo-500/20 pointer-events-none">
               <i className="fa-solid fa-camera-retro text-xs text-white"></i>
             </div>
-            <span className="font-black text-sm tracking-tighter uppercase text-zinc-100">LensLink Pro</span>
+            <span className="font-black text-sm tracking-tighter uppercase text-zinc-100 pointer-events-none">LensLink Pro</span>
           </div>
-
-          <div className="flex items-center gap-1 bg-zinc-950 p-1 rounded-lg border border-zinc-800/50">
+  
+          <div className="flex items-center gap-1 bg-zinc-950 p-1 rounded-lg border border-zinc-800/50" data-tauri-drag-region="false" style={{WebkitAppRegion: 'no-drag'} as any}>
             {(['ALL', 'PICKED', 'REJECTED', 'UNMARKED', 'ORPHANS'] as const).map(f => (
               <button 
                 key={f} 
@@ -433,8 +528,8 @@ const App: React.FC = () => {
             ))}
           </div>
         </div>
-
-        <div className="flex items-center gap-3">
+  
+        <div className="flex items-center gap-3" data-tauri-drag-region="false" style={{WebkitAppRegion: 'no-drag'} as any}>
           <div className="flex bg-zinc-950 rounded-lg border border-zinc-800/50 overflow-hidden">
             <button 
               onClick={handleImportFiles}
@@ -453,7 +548,7 @@ const App: React.FC = () => {
               {isLoading ? 'Loading...' : 'Import Folder'}
             </button>
           </div>
-
+  
           <button 
              onClick={() => setShowDeleteConfirm(true)}
              disabled={stats.rejected === 0}
@@ -461,18 +556,53 @@ const App: React.FC = () => {
           >
             <i className="fa-solid fa-trash-can mr-2"></i> Confirm {stats.rejected} Rejects
           </button>
-
-          <div className="relative group">
+  
+          <div className="relative" ref={exportMenuRef}>
             <button 
-              className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[11px] font-bold shadow-lg shadow-indigo-600/20 flex items-center gap-2 transition-all"
+              onClick={() => {
+                if (stats.picked === 0) {
+                  alert("No photos are picked for export.");
+                  return;
+                }
+                setShowExportMenu(!showExportMenu);
+              }}
+              disabled={stats.picked === 0}
+              className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[11px] font-bold shadow-lg shadow-indigo-600/20 flex items-center gap-2 transition-all disabled:opacity-30 disabled:pointer-events-none"
             >
               <i className="fa-solid fa-paper-plane"></i> Export Picks
             </button>
-            <div className="absolute top-full right-0 mt-2 w-44 bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl invisible group-hover:visible z-50 p-1 flex flex-col">
-               <button onClick={() => handleExportStart('JPG')} className="px-4 py-2.5 text-[10px] font-bold text-zinc-400 hover:bg-zinc-800 hover:text-white text-left rounded-lg transition-colors">JPG ONLY</button>
-               <button onClick={() => handleExportStart('RAW')} className="px-4 py-2.5 text-[10px] font-bold text-zinc-400 hover:bg-zinc-800 hover:text-white text-left rounded-lg transition-colors">RAW ONLY</button>
-               <button onClick={() => handleExportStart('BOTH')} className="px-4 py-2.5 text-[10px] font-bold text-zinc-400 hover:bg-zinc-800 hover:text-white text-left rounded-lg transition-colors border-t border-zinc-800 mt-1 pt-2">RAW + JPG</button>
-            </div>
+            {showExportMenu && (
+              <div className="absolute top-full right-0 mt-2 w-44 bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl z-50 p-1 flex flex-col">
+                <button onClick={() => { handleExportStart('JPG'); setShowExportMenu(false); }} className="px-4 py-2.5 text-[10px] font-bold text-zinc-400 hover:bg-zinc-800 hover:text-white text-left rounded-lg transition-colors">JPG ONLY</button>
+                <button onClick={() => { handleExportStart('RAW'); setShowExportMenu(false); }} className="px-4 py-2.5 text-[10px] font-bold text-zinc-400 hover:bg-zinc-800 hover:text-white text-left rounded-lg transition-colors">RAW ONLY</button>
+                <button onClick={() => { handleExportStart('BOTH'); setShowExportMenu(false); }} className="px-4 py-2.5 text-[10px] font-bold text-zinc-400 hover:bg-zinc-800 hover:text-white text-left rounded-lg transition-colors border-t border-zinc-800 mt-1 pt-2">RAW + JPG</button>
+              </div>
+            )}
+          </div>
+  
+          {/* Window Controls */}
+          <div className="flex items-center gap-1 ml-2 border-l border-zinc-800 pl-3">
+            <button
+              onClick={handleMinimize}
+              className="w-8 h-8 flex items-center justify-center rounded hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 transition-colors"
+              title="最小化"
+            >
+              <i className="fa-solid fa-window-minimize text-[10px]"></i>
+            </button>
+            <button
+              onClick={handleMaximize}
+              className="w-8 h-8 flex items-center justify-center rounded hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 transition-colors"
+              title="最大化/还原"
+            >
+              <i className="fa-regular fa-window-maximize text-xs"></i>
+            </button>
+            <button
+              onClick={handleClose}
+              className="w-8 h-8 flex items-center justify-center rounded hover:bg-red-600 text-zinc-400 hover:text-white transition-colors"
+              title="关闭"
+            >
+              <i className="fa-solid fa-xmark text-sm"></i>
+            </button>
           </div>
         </div>
       </nav>
