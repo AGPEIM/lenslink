@@ -1,11 +1,8 @@
 import LibRaw from 'libraw-wasm';
 import { readFile } from '@tauri-apps/plugin-fs';
 
-// Cache for decoded RAW images (full quality for viewer)
+// Cache for decoded RAW images (only store full decode result)
 const rawImageCache = new Map<string, string>();
-
-// Cache for RAW thumbnails (low quality for filmstrip)
-const rawThumbnailCache = new Map<string, string>();
 
 // Track ongoing decode operations to prevent duplicate work
 const ongoingDecodes = new Map<string, Promise<string>>();
@@ -17,22 +14,36 @@ const ongoingDecodes = new Map<string, Promise<string>>();
  */
 export async function decodeRawFile(filePath: string, thumbnail: boolean = false): Promise<string> {
   const startTime = performance.now();
-  const cacheKey = `${filePath}:${thumbnail ? 'thumb' : 'full'}`;
   
-  // Check cache first
-  const cache = thumbnail ? rawThumbnailCache : rawImageCache;
-  if (cache.has(filePath)) {
-    console.log(`[RAW Cache Hit] ${thumbnail ? 'Thumbnail' : 'Full'} loaded from cache in ${(performance.now() - startTime).toFixed(1)}ms`);
-    return cache.get(filePath)!;
+  // Check cache first - we only cache the full decode
+  if (rawImageCache.has(filePath)) {
+    const cachedDataUrl = rawImageCache.get(filePath)!;
+    
+    // If requesting thumbnail, scale down the cached full image
+    if (thumbnail) {
+      console.log(`[RAW Cache Hit] Generating thumbnail from cached full image`);
+      const thumbnailUrl = await createThumbnailFromDataUrl(cachedDataUrl);
+      console.log(`[RAW Cache] Thumbnail generated in ${(performance.now() - startTime).toFixed(1)}ms`);
+      return thumbnailUrl;
+    }
+    
+    console.log(`[RAW Cache Hit] Full image loaded from cache in ${(performance.now() - startTime).toFixed(1)}ms`);
+    return cachedDataUrl;
   }
   
   // Check if already decoding this file
-  if (ongoingDecodes.has(cacheKey)) {
-    console.log(`[RAW] Waiting for ongoing decode: ${cacheKey}`);
-    return ongoingDecodes.get(cacheKey)!;
+  if (ongoingDecodes.has(filePath)) {
+    console.log(`[RAW] Waiting for ongoing decode: ${filePath}`);
+    const fullDataUrl = await ongoingDecodes.get(filePath)!;
+    
+    // If requesting thumbnail, scale down the result
+    if (thumbnail) {
+      return createThumbnailFromDataUrl(fullDataUrl);
+    }
+    return fullDataUrl;
   }
   
-  // Start new decode operation
+  // Start new decode operation (always decode full size)
   const decodePromise = (async () => {
   try {
     // Read the file using Tauri's filesystem API
@@ -45,25 +56,14 @@ export async function decodeRawFile(filePath: string, thumbnail: boolean = false
     const raw = new LibRaw();
     console.log(`[RAW] 2. LibRaw init: ${(performance.now() - t2).toFixed(1)}ms`);
     
-    // Optimized settings based on usage
-    const settings = thumbnail ? {
-      halfSize: true,        // Half size for thumbnails
+    // Always use fast settings (we'll decode once and scale for thumbnails)
+    const settings = {
+      halfSize: true,        // Use half size for faster decoding
       outputBps: 8,
-      useAutoWb: false,      // Skip auto WB for faster processing
+      useAutoWb: false,      // Skip auto WB for speed
       useCameraWb: true,     // Use camera WB (faster)
       outputColor: 1,        // sRGB
-      userQual: 0,           // Fastest interpolation (0 = bilinear)
-      noAutoScale: false,
-      noInterpolation: false,
-      medPasses: 0,          // Disable median filter
-      fbddNoiserd: 0,        // Disable noise reduction
-    } : {
-      halfSize: true,        // Use half size even for viewer
-      outputBps: 8,
-      useAutoWb: false,      // Skip auto WB for speed (use camera WB)
-      useCameraWb: true,     // Faster than auto WB
-      outputColor: 1,        // sRGB
-      userQual: 1,           // Fast interpolation (1 = VNG)
+      userQual: 1,           // Fast interpolation (1 = VNG, good balance)
       medPasses: 0,          // Disable median filter
       fbddNoiserd: 0,        // Disable noise reduction
     };
@@ -123,13 +123,13 @@ export async function decodeRawFile(filePath: string, thumbnail: boolean = false
         canvasHeight = Math.round(height * scale);
       }
     }
-    console.log(`[RAW] 7. Calculate dimensions: ${(performance.now() - t7).toFixed(1)}ms - ${width}x${height} -> ${canvasWidth}x${canvasHeight}`);
+    console.log(`[RAW] 7. Calculate dimensions: ${(performance.now() - t7).toFixed(1)}ms - ${width}x${height}`);
     
-    // Create canvas to convert to image
+    // Create canvas for full-size image
     const t8 = performance.now();
     const canvas = document.createElement('canvas');
-    canvas.width = canvasWidth;
-    canvas.height = canvasHeight;
+    canvas.width = width;
+    canvas.height = height;
     
     const ctx = canvas.getContext('2d');
     if (!ctx) {
@@ -182,25 +182,20 @@ export async function decodeRawFile(filePath: string, thumbnail: boolean = false
     tempCtx.putImageData(imgData, 0, 0);
     console.log(`[RAW] 8. RGB->RGBA conversion + putImageData: ${(performance.now() - t8).toFixed(1)}ms`);
     
-    // Scale down if thumbnail
+    // Draw to final canvas
     const t9 = performance.now();
-    if (thumbnail && (canvasWidth !== width || canvasHeight !== height)) {
-      ctx.drawImage(tempCanvas, 0, 0, canvasWidth, canvasHeight);
-    } else {
-      ctx.drawImage(tempCanvas, 0, 0);
-    }
-    console.log(`[RAW] 9. Canvas scaling: ${(performance.now() - t9).toFixed(1)}ms`);
+    ctx.drawImage(tempCanvas, 0, 0);
+    console.log(`[RAW] 9. Canvas draw: ${(performance.now() - t9).toFixed(1)}ms`);
     
-    // Convert to data URL (use lower quality for thumbnails)
+    // Convert to data URL (high quality for caching)
     const t10 = performance.now();
-    const quality = thumbnail ? 0.6 : 0.9;
-    const dataUrl = canvas.toDataURL('image/jpeg', quality);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
     console.log(`[RAW] 10. toDataURL: ${(performance.now() - t10).toFixed(1)}ms`);
     
-    // Cache the result
-    cache.set(filePath, dataUrl);
+    // Cache the full-size result
+    rawImageCache.set(filePath, dataUrl);
     
-    console.log(`[RAW TOTAL] ${thumbnail ? 'Thumbnail' : 'Full'} decode completed in ${(performance.now() - startTime).toFixed(1)}ms`);
+    console.log(`[RAW TOTAL] Full decode completed in ${(performance.now() - startTime).toFixed(1)}ms`);
     console.log('---');
     
     return dataUrl;
@@ -209,14 +204,61 @@ export async function decodeRawFile(filePath: string, thumbnail: boolean = false
     throw error;
   } finally {
     // Clean up ongoing decode tracking
-    ongoingDecodes.delete(cacheKey);
+    ongoingDecodes.delete(filePath);
   }
   })();
   
   // Store the promise to prevent duplicate work
-  ongoingDecodes.set(cacheKey, decodePromise);
+  ongoingDecodes.set(filePath, decodePromise);
   
-  return decodePromise;
+  // Wait for decode to complete
+  const fullDataUrl = await decodePromise;
+  
+  // If thumbnail requested, scale down from the full image
+  if (thumbnail) {
+    const thumbStart = performance.now();
+    const thumbnailUrl = await createThumbnailFromDataUrl(fullDataUrl);
+    console.log(`[RAW] Thumbnail scaled from full image in ${(performance.now() - thumbStart).toFixed(1)}ms`);
+    return thumbnailUrl;
+  }
+  
+  return fullDataUrl;
+}
+
+/**
+ * Create a thumbnail from a full-size data URL
+ */
+async function createThumbnailFromDataUrl(dataUrl: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      // Scale down to max 320px width
+      const maxWidth = 320;
+      let width = img.width;
+      let height = img.height;
+      
+      if (width > maxWidth) {
+        const scale = maxWidth / width;
+        width = maxWidth;
+        height = Math.round(height * scale);
+      }
+      
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        reject(new Error('Failed to get canvas context'));
+        return;
+      }
+      
+      ctx.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/jpeg', 0.7));
+    };
+    img.onerror = () => reject(new Error('Failed to load image'));
+    img.src = dataUrl;
+  });
 }
 
 /**
@@ -224,7 +266,6 @@ export async function decodeRawFile(filePath: string, thumbnail: boolean = false
  */
 export function clearRawCache() {
   rawImageCache.clear();
-  rawThumbnailCache.clear();
 }
 
 /**
