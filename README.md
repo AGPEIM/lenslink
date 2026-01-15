@@ -121,7 +121,7 @@ Download the latest release for your platform:
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/lenslink.git
+git clone https://github.com/AGPEIM/lenslink.git
 cd lenslink
 
 # Install dependencies
