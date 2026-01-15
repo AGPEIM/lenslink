@@ -104,7 +104,7 @@
 - **macOS**：`LensLink_aarch64.dmg`（Apple Silicon）/ `LensLink_x64.dmg`（Intel）
 - **Linux**：`LensLink_amd64.AppImage` 或 `.deb`
 
-👉 [从 Releases 下载](https://github.com/yourusername/lenslink/releases)
+👉 [从 Releases 下载](https://github.com/AGPEIM/lenslink/releases)
 
 ### 从源码构建
 
@@ -118,7 +118,7 @@
 
 ```bash
 # 克隆仓库
-git clone https://github.com/yourusername/lenslink.git
+git clone https://github.com/AGPEIM/lenslink.git
 cd lenslink
 
 # 安装依赖
@@ -236,8 +236,8 @@ LensLink 支持多种语言：
 
 ## 📧 联系与支持
 
-- **问题反馈**：[GitHub Issues](https://github.com/yourusername/lenslink/issues)
-- **讨论**：[GitHub Discussions](https://github.com/yourusername/lenslink/discussions)
+- **问题反馈**：[GitHub Issues](https://github.com/AGPEIM/lenslink/issues)
+- **讨论**：[GitHub Discussions](https://github.com/AGPEIM/lenslink/discussions)
 
 ---
 
