@@ -1,18 +1,19 @@
 
 import React, { useState } from 'react';
 import { PhotoGroup, ExportOperation } from '../types';
+import { getTranslations, Language } from '../i18n';
 
 interface ConfirmationModalProps {
-  title: string;
   groups: PhotoGroup[];
-  confirmLabel: string;
   onConfirm: (operation?: ExportOperation) => void;
   onCancel: () => void;
   type: 'delete' | 'export';
   theme: 'light' | 'dark';
+  language?: Language;
 }
 
-const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ title, groups, confirmLabel, onConfirm, onCancel, type, theme }) => {
+const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ groups, onConfirm, onCancel, type, theme, language = 'zh' }) => {
+  const t = getTranslations(language);
   const [operation, setOperation] = useState<ExportOperation>('COPY');
   
   return (
@@ -21,15 +22,15 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ title, groups, co
         <div className={`p-6 border-b ${theme === 'dark' ? 'border-zinc-800' : 'border-gray-200'}`}>
           <h2 className={`text-xl font-bold flex items-center gap-3 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
             <i className={`fa-solid ${type === 'delete' ? 'fa-triangle-exclamation text-rose-500' : 'fa-download text-emerald-500'}`}></i>
-            {title}
+            {type === 'delete' ? t.confirmationModal.delete.title : t.confirmationModal.export.title}
           </h2>
           <p className={`text-sm mt-1 ${theme === 'dark' ? 'text-zinc-500' : 'text-gray-600'}`}>
-            You are about to {type === 'delete' ? 'move to trash' : 'export'} {groups.length} photo groups ({groups.reduce((acc, g) => acc + (g.jpg ? 1 : 0) + (g.raw ? 1 : 0), 0)} individual files).{type === 'delete' ? ' Files will be moved to the recycle bin and can be restored.' : ''}
+            {type === 'delete' ? t.confirmationModal.delete.youAreAboutToMoveToTrash : t.confirmationModal.export.youAreAboutToExport} {groups.length} {type === 'delete' ? t.confirmationModal.delete.description : t.confirmationModal.export.description}{groups.reduce((acc, g) => acc + (g.jpg ? 1 : 0) + (g.raw ? 1 : 0), 0)} {type === 'delete' ? t.confirmationModal.delete.individualFiles : t.confirmationModal.export.individualFiles}{type === 'delete' ? '' : ''}
           </p>
           
           {type === 'export' && (
             <div className="mt-4 space-y-2">
-              <label className={`text-xs uppercase font-bold tracking-wider ${theme === 'dark' ? 'text-zinc-400' : 'text-gray-500'}`}>Operation Type</label>
+              <label className={`text-xs uppercase font-bold tracking-wider ${theme === 'dark' ? 'text-zinc-400' : 'text-gray-500'}`}>{t.confirmationModal.export.operationType}</label>
               <div className="flex gap-2">
                 <button
                   onClick={() => setOperation('COPY')}
@@ -40,7 +41,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ title, groups, co
                   }`}
                 >
                   <i className="fa-solid fa-copy mr-2"></i>
-                  Copy Files
+                  {t.confirmationModal.export.copyFiles}
                 </button>
                 <button
                   onClick={() => setOperation('MOVE')}
@@ -51,11 +52,11 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ title, groups, co
                   }`}
                 >
                   <i className="fa-solid fa-arrows-turn-right mr-2"></i>
-                  Move Files
+                  {t.confirmationModal.export.moveFiles}
                 </button>
               </div>
               <p className={`text-xs italic ${theme === 'dark' ? 'text-zinc-500' : 'text-gray-500'}`}>
-                {operation === 'COPY' ? 'Original files will remain in their current location' : 'Original files will be moved from their current location'}
+                {operation === 'COPY' ? t.confirmationModal.export.copyDescription : t.confirmationModal.export.moveDescription}
               </p>
             </div>
           )}
@@ -70,7 +71,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ title, groups, co
              ))}
              {groups.length > 20 && (
                <div className={`col-span-2 text-[10px] italic text-center py-2 ${theme === 'dark' ? 'text-zinc-600' : 'text-gray-500'}`}>
-                 ... and {groups.length - 20} more
+                 {t.confirmationModal.andMore} {groups.length - 20} {t.confirmationModal.more}
                </div>
              )}
           </div>
@@ -81,7 +82,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ title, groups, co
             onClick={onCancel}
             className={`px-6 py-2 rounded-xl transition-colors text-sm font-bold ${theme === 'dark' ? 'text-zinc-400 hover:text-white hover:bg-zinc-800' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
           >
-            Cancel
+            {t.confirmationModal.buttons.cancel}
           </button>
           <button 
             onClick={() => onConfirm(type === 'export' ? operation : undefined)}
@@ -89,7 +90,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ title, groups, co
               type === 'delete' ? 'bg-rose-600 hover:bg-rose-500' : 'bg-emerald-600 hover:bg-emerald-500'
             }`}
           >
-            {type === 'export' ? `${operation === 'COPY' ? 'Copy' : 'Move'} Files` : confirmLabel}
+            {type === 'export' ? `${operation === 'COPY' ? t.confirmationModal.export.copy : t.confirmationModal.export.move} ${language === 'zh' ? '文件' : 'Files'}` : t.confirmationModal.delete.confirmLabel}
           </button>
         </div>
       </div>

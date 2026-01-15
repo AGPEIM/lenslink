@@ -3,15 +3,18 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { PhotoGroup, SelectionState } from '../types';
 import { formatSize } from '../utils/fileHelpers';
 import { decodeRawFile } from '../utils/rawLoader';
+import { getTranslations, Language } from '../i18n';
 
 interface ViewerProps {
   group: PhotoGroup;
   animationClass: string;
   onUpdateSelection?: (state: SelectionState) => void;
   theme: 'light' | 'dark';
+  language?: Language;
 }
 
-const Viewer: React.FC<ViewerProps> = ({ group, animationClass, onUpdateSelection, theme }) => {
+const Viewer: React.FC<ViewerProps> = ({ group, animationClass, onUpdateSelection, theme, language = 'zh' }) => {
+  const t = getTranslations(language);
   const [zoom, setZoom] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -137,9 +140,9 @@ const Viewer: React.FC<ViewerProps> = ({ group, animationClass, onUpdateSelectio
                 <i className="fa-solid fa-spinner fa-spin text-6xl text-indigo-400"></i>
               </div>
               <div className="text-center space-y-3">
-                <h3 className="text-2xl font-bold text-zinc-200">Decoding RAW File...</h3>
+                <h3 className="text-2xl font-bold text-zinc-200">{t.viewer.rawLoading.title}</h3>
                 <p className="text-zinc-400 max-w-md leading-relaxed">
-                  Processing <span className="text-indigo-400 font-semibold">{group.raw?.extension}</span> file
+                  {t.viewer.rawLoading.processing} <span className="text-indigo-400 font-semibold">{group.raw?.extension}</span> {t.viewer.rawLoading.file}
                 </p>
                 <p className="text-sm text-zinc-500">{group.raw?.name}</p>
               </div>
@@ -151,9 +154,9 @@ const Viewer: React.FC<ViewerProps> = ({ group, animationClass, onUpdateSelectio
                 <i className="fa-solid fa-triangle-exclamation text-6xl text-rose-400"></i>
               </div>
               <div className="text-center space-y-3">
-                <h3 className="text-2xl font-bold text-zinc-200">Failed to Decode RAW</h3>
+                <h3 className="text-2xl font-bold text-zinc-200">{t.viewer.rawError.title}</h3>
                 <p className="text-zinc-400 max-w-md leading-relaxed">
-                  Could not process <span className="text-rose-400 font-semibold">{group.raw?.extension}</span> file
+                  {t.viewer.rawError.couldNotProcess} <span className="text-rose-400 font-semibold">{group.raw?.extension}</span> {t.viewer.rawError.file}
                 </p>
                 <p className="text-sm text-zinc-500 font-mono">{rawError}</p>
                 <div className="pt-4 text-sm text-zinc-500">
@@ -177,12 +180,12 @@ const Viewer: React.FC<ViewerProps> = ({ group, animationClass, onUpdateSelectio
                 <i className="fa-solid fa-file-image text-6xl text-indigo-400"></i>
               </div>
               <div className="text-center space-y-3">
-                <h3 className="text-2xl font-bold text-zinc-200">No Preview Available</h3>
+                <h3 className="text-2xl font-bold text-zinc-200">{t.viewer.noPreview.title}</h3>
                 <p className="text-zinc-400 max-w-md leading-relaxed">
                   {group.raw ? (
-                    <>RAW file without preview<br />({group.raw.extension})</>
+                    <>{t.viewer.noPreview.rawWithoutPreview}<br />({group.raw.extension})</>
                   ) : (
-                    <>No image file found</>
+                    <>{t.viewer.noPreview.noImageFound}</>
                   )}
                 </p>
               </div>
@@ -212,7 +215,7 @@ const Viewer: React.FC<ViewerProps> = ({ group, animationClass, onUpdateSelectio
             onClick={resetZoom}
             className="px-2 text-[10px] font-bold text-indigo-400 hover:text-indigo-300 transition-colors"
           >
-            RESET
+            {t.viewer.zoom.reset}
           </button>
         </div>
 
@@ -220,12 +223,12 @@ const Viewer: React.FC<ViewerProps> = ({ group, animationClass, onUpdateSelectio
         <div className="absolute top-10 right-10 pointer-events-none z-20">
            {group.selection === SelectionState.PICKED && (
              <div className="bg-emerald-500 text-white px-4 py-2 rounded-full font-bold shadow-lg flex items-center gap-2">
-               <i className="fa-solid fa-check"></i> PICKED
+               <i className="fa-solid fa-check"></i> {t.viewer.statusLabel.picked}
              </div>
            )}
            {group.selection === SelectionState.REJECTED && (
              <div className="bg-rose-500 text-white px-4 py-2 rounded-full font-bold shadow-lg flex items-center gap-2">
-               <i className="fa-solid fa-xmark"></i> REJECTED
+               <i className="fa-solid fa-xmark"></i> {t.viewer.statusLabel.rejected}
              </div>
            )}
         </div>
@@ -247,43 +250,43 @@ const Viewer: React.FC<ViewerProps> = ({ group, animationClass, onUpdateSelectio
         </section>
 
         <section className="grid grid-cols-2 gap-3">
-          <ExifTile icon="fa-stopwatch" label="Shutter" value={group.exif?.shutterSpeed} theme={theme} />
-          <ExifTile icon="fa-circle-dot" label="Aperture" value={group.exif?.aperture} theme={theme} />
-          <ExifTile icon="fa-camera" label="ISO" value={group.exif?.iso} theme={theme} />
-          <ExifTile icon="fa-arrows-left-right" label="Focal" value={group.exif?.focalLength} theme={theme} />
+          <ExifTile icon="fa-stopwatch" label={t.viewer.exif.shutter} value={group.exif?.shutterSpeed} theme={theme} />
+          <ExifTile icon="fa-circle-dot" label={t.viewer.exif.aperture} value={group.exif?.aperture} theme={theme} />
+          <ExifTile icon="fa-camera" label={t.viewer.exif.iso} value={group.exif?.iso} theme={theme} />
+          <ExifTile icon="fa-arrows-left-right" label={t.viewer.exif.focal} value={group.exif?.focalLength} theme={theme} />
         </section>
 
         <section className="space-y-4">
           <div className="space-y-1">
-            <p className={`text-[10px] uppercase font-bold tracking-wider ${theme === 'dark' ? 'text-zinc-500' : 'text-gray-500'}`}>Device</p>
+            <p className={`text-[10px] uppercase font-bold tracking-wider ${theme === 'dark' ? 'text-zinc-500' : 'text-gray-500'}`}>{t.viewer.exif.device}</p>
             <p className={`text-sm ${theme === 'dark' ? 'text-zinc-200' : 'text-gray-700'}`}>{group.exif?.model}</p>
           </div>
           <div className="space-y-1">
-            <p className={`text-[10px] uppercase font-bold tracking-wider ${theme === 'dark' ? 'text-zinc-500' : 'text-gray-500'}`}>Optics</p>
+            <p className={`text-[10px] uppercase font-bold tracking-wider ${theme === 'dark' ? 'text-zinc-500' : 'text-gray-500'}`}>{t.viewer.exif.optics}</p>
             <p className={`text-sm ${theme === 'dark' ? 'text-zinc-200' : 'text-gray-700'}`}>{group.exif?.lens}</p>
           </div>
           <div className="space-y-1">
-             <p className={`text-[10px] uppercase font-bold tracking-wider ${theme === 'dark' ? 'text-zinc-500' : 'text-gray-500'}`}>Timestamp</p>
+             <p className={`text-[10px] uppercase font-bold tracking-wider ${theme === 'dark' ? 'text-zinc-500' : 'text-gray-500'}`}>{t.viewer.exif.timestamp}</p>
              <p className={`text-sm ${theme === 'dark' ? 'text-zinc-200' : 'text-gray-700'}`}>{group.exif?.dateTime}</p>
           </div>
         </section>
 
         <section className={`space-y-2 pt-6 border-t ${theme === 'dark' ? 'border-zinc-800' : 'border-gray-200'}`}>
-          <p className={`text-[10px] uppercase font-bold tracking-wider mb-2 ${theme === 'dark' ? 'text-zinc-500' : 'text-gray-500'}`}>Bundle Files</p>
+          <p className={`text-[10px] uppercase font-bold tracking-wider mb-2 ${theme === 'dark' ? 'text-zinc-500' : 'text-gray-500'}`}>{t.viewer.files.bundleFiles}</p>
           {group.jpg && <FileItem ext="JPG" size={formatSize(group.jpg.size)} theme={theme} />}
           {group.raw && <FileItem ext={group.raw.extension} size={formatSize(group.raw.size)} isRaw theme={theme} />}
         </section>
         
         <div className={`pt-4 text-[10px] italic leading-relaxed ${theme === 'dark' ? 'text-zinc-500' : 'text-gray-500'}`}>
-          <p>• Use Mouse Wheel to zoom</p>
-          <p>• Click & Drag to pan when zoomed</p>
-          <p>• Double-click to reset view</p>
+          <p>{t.viewer.tips.mouseWheel}</p>
+          <p>{t.viewer.tips.dragToPan}</p>
+          <p>{t.viewer.tips.doubleClick}</p>
         </div>
         </div>
 
         {/* Fixed Rating Actions at bottom */}
         <section className={`border-t p-4 ${theme === 'dark' ? 'border-zinc-800 bg-zinc-900/80' : 'border-gray-200 bg-white/80'}`}>
-          <p className={`text-[10px] uppercase font-bold tracking-wider mb-2 ${theme === 'dark' ? 'text-zinc-500' : 'text-gray-500'}`}>Quick Rating</p>
+          <p className={`text-[10px] uppercase font-bold tracking-wider mb-2 ${theme === 'dark' ? 'text-zinc-500' : 'text-gray-500'}`}>{t.viewer.rating.title}</p>
           <div className="flex flex-col gap-2">
             <button
               onClick={() => onUpdateSelection?.(SelectionState.PICKED)}
@@ -294,11 +297,11 @@ const Viewer: React.FC<ViewerProps> = ({ group, animationClass, onUpdateSelectio
                       ? 'bg-zinc-800/40 border-zinc-700/50 text-zinc-300 hover:bg-emerald-500/10 hover:border-emerald-500/50'
                       : 'bg-gray-100/60 border-gray-300/50 text-gray-700 hover:bg-emerald-50 hover:border-emerald-300')
               }`}
-              title="Press P to pick"
+              title={t.viewer.rating.pressPToPick}
             >
               <span className="flex items-center gap-3">
                 <i className="fa-solid fa-flag text-base"></i>
-                <span className="font-semibold text-sm">Pick</span>
+                <span className="font-semibold text-sm">{t.viewer.rating.pick}</span>
               </span>
               <kbd className={`px-2 py-1 text-[10px] font-mono font-bold border rounded transition-colors ${
                 group.selection === SelectionState.PICKED
@@ -318,11 +321,11 @@ const Viewer: React.FC<ViewerProps> = ({ group, animationClass, onUpdateSelectio
                       ? 'bg-zinc-800/40 border-zinc-700/50 text-zinc-300 hover:bg-zinc-700/20 hover:border-zinc-600/50'
                       : 'bg-gray-100/60 border-gray-300/50 text-gray-700 hover:bg-gray-200/60 hover:border-gray-400/50')
               }`}
-              title="Press U to unmark"
+              title={t.viewer.rating.pressUToUnmark}
             >
               <span className="flex items-center gap-3">
                 <i className="fa-solid fa-circle-dot text-base"></i>
-                <span className="font-semibold text-sm">Unmark</span>
+                <span className="font-semibold text-sm">{t.viewer.rating.unmark}</span>
               </span>
               <kbd className={`px-2 py-1 text-[10px] font-mono font-bold border rounded transition-colors ${
                 group.selection === SelectionState.UNMARKED
@@ -340,11 +343,11 @@ const Viewer: React.FC<ViewerProps> = ({ group, animationClass, onUpdateSelectio
                       ? 'bg-zinc-800/40 border-zinc-700/50 text-zinc-300 hover:bg-rose-500/10 hover:border-rose-500/50'
                       : 'bg-gray-100/60 border-gray-300/50 text-gray-700 hover:bg-rose-50 hover:border-rose-300')
               }`}
-              title="Press X to reject"
+              title={t.viewer.rating.pressXToReject}
             >
               <span className="flex items-center gap-3">
                 <i className="fa-solid fa-trash-can text-base"></i>
-                <span className="font-semibold text-sm">Reject</span>
+                <span className="font-semibold text-sm">{t.viewer.rating.reject}</span>
               </span>
               <kbd className={`px-2 py-1 text-[10px] font-mono font-bold border rounded transition-colors ${
                 group.selection === SelectionState.REJECTED

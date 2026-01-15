@@ -9,6 +9,7 @@ import { open } from '@tauri-apps/plugin-dialog';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { decodeRawFile } from './utils/rawLoader';
+import { getTranslations, Language } from './i18n';
 
 const App: React.FC = () => {
   const [photos, setPhotos] = useState<PhotoGroup[]>([]);
@@ -34,7 +35,8 @@ const App: React.FC = () => {
   // Settings
   const [showSettings, setShowSettings] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
-  const [language, setLanguage] = useState<'zh' | 'en'>('zh');
+  const [language, setLanguage] = useState<Language>('zh');
+  const t = getTranslations(language);
 
   // Window controls
   const appWindow = getCurrentWindow();
@@ -241,7 +243,7 @@ const App: React.FC = () => {
       }
     } catch (error) {
       console.error('Failed to import files:', error);
-      alert(`导入失败: ${error}`);
+      alert(`${t.messages.importFailed}: ${error}`);
     } finally {
       setIsLoading(false);
     }
@@ -276,7 +278,7 @@ const App: React.FC = () => {
       }
     } catch (error) {
       console.error('Failed to import folder:', error);
-      alert(`导入失败: ${error}`);
+      alert(`${t.messages.importFailed}: ${error}`);
     } finally {
       setIsLoading(false);
     }
@@ -373,14 +375,14 @@ const App: React.FC = () => {
       console.log(`Successfully moved ${movedFiles.length} files to trash`);
     } catch (error) {
       console.error('Failed to move files to trash:', error);
-      alert(`删除失败: ${error}`);
+      alert(`${t.messages.deleteFailed}: ${error}`);
       setShowDeleteConfirm(false);
     }
   };
 
   const handleExportStart = (mode: ExportMode) => {
     if (stats.picked === 0) {
-      alert("No photos are picked for export.");
+      alert(t.messages.noPhotosToExport);
       return;
     }
     setExportMode(mode);
@@ -403,14 +405,14 @@ const App: React.FC = () => {
       
       if (!destinationFolder || typeof destinationFolder !== 'string') {
         setShowExportConfirm(false);
-        return; // 用户取消
+        return;
       }
       
       // 获取要导出的组
       const pickedGroups = photos.filter(p => p.selection === SelectionState.PICKED);
       
       if (pickedGroups.length === 0) {
-        alert("No photos are picked for export.");
+        alert(t.messages.noPhotosToExport);
         setShowExportConfirm(false);
         return;
       }
@@ -449,11 +451,12 @@ const App: React.FC = () => {
       }
       
       setShowExportConfirm(false);
-      alert(`Successfully ${operation === 'COPY' ? 'copied' : 'moved'} ${exportedFiles.length} files to ${destinationFolder}`);
+      const operationText = operation === 'COPY' ? t.messages.exportSuccessCopied : t.messages.exportSuccessMoved;
+      alert(`${t.messages.exportSuccess} ${operationText} ${exportedFiles.length} ${t.messages.files} ${destinationFolder}`);
       console.log(`Export completed:`, exportedFiles);
     } catch (error) {
       console.error('Failed to export files:', error);
-      alert(`Export failed: ${error}`);
+      alert(`${t.messages.exportFailed}: ${error}`);
       setShowExportConfirm(false);
     }
   };
@@ -519,19 +522,22 @@ const App: React.FC = () => {
             <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center rotate-3 shadow-lg shadow-indigo-500/20 pointer-events-none">
               <i className="fa-solid fa-camera-retro text-xs text-white"></i>
             </div>
-            <span className={`font-black text-sm tracking-tighter uppercase pointer-events-none ${theme === 'dark' ? 'text-zinc-100' : 'text-gray-900'}`}>LensLink Pro</span>
+            <span className={`font-black text-sm tracking-tighter uppercase pointer-events-none ${theme === 'dark' ? 'text-zinc-100' : 'text-gray-900'}`}>{t.appName}</span>
           </div>
   
           <div className={`flex items-center gap-1 p-1 rounded-lg border ${theme === 'dark' ? 'bg-zinc-950 border-zinc-800/50' : 'bg-gray-100 border-gray-300/50'}`} data-tauri-drag-region="false" style={{WebkitAppRegion: 'no-drag'} as any}>
-            {(['ALL', 'PICKED', 'REJECTED', 'UNMARKED', 'ORPHANS'] as const).map(f => (
-              <button 
-                key={f} 
-                onClick={() => setFilter(f)}
-                className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all ${filter === f ? (theme === 'dark' ? 'bg-zinc-800 text-white shadow-inner' : 'bg-white text-gray-900 shadow-md') : (theme === 'dark' ? 'text-zinc-600 hover:text-zinc-300' : 'text-gray-500 hover:text-gray-700')}`}
-              >
-                {f}
-              </button>
-            ))}
+            {(['ALL', 'PICKED', 'REJECTED', 'UNMARKED', 'ORPHANS'] as const).map(f => {
+              const filterKey = f.toLowerCase() as keyof typeof t.filters;
+              return (
+                <button 
+                  key={f} 
+                  onClick={() => setFilter(f)}
+                  className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all ${filter === f ? (theme === 'dark' ? 'bg-zinc-800 text-white shadow-inner' : 'bg-white text-gray-900 shadow-md') : (theme === 'dark' ? 'text-zinc-600 hover:text-zinc-300' : 'text-gray-500 hover:text-gray-700')}`}
+                >
+                  {t.filters[filterKey].toUpperCase()}
+                </button>
+              );
+            })}
           </div>
         </div>
   
@@ -543,7 +549,7 @@ const App: React.FC = () => {
               className={`px-4 py-2 text-[11px] font-bold flex items-center gap-2 transition-colors disabled:opacity-50 border-r ${theme === 'dark' ? 'text-zinc-400 hover:bg-zinc-900 border-zinc-800/50' : 'text-gray-600 hover:bg-gray-100 border-gray-300/50'}`}
             >
               <i className={`fa-solid fa-file-circle-plus ${isLoading ? 'animate-pulse' : ''}`}></i> 
-              {isLoading ? 'Loading...' : 'Import Files'}
+              {isLoading ? t.buttons.loading : t.buttons.importFiles}
             </button>
             <button 
               onClick={handleImportFolder}
@@ -551,7 +557,7 @@ const App: React.FC = () => {
               className={`px-4 py-2 text-[11px] font-bold flex items-center gap-2 transition-colors disabled:opacity-50 ${theme === 'dark' ? 'text-zinc-400 hover:bg-zinc-900' : 'text-gray-600 hover:bg-gray-100'}`}
             >
               <i className={`fa-solid fa-folder-open ${isLoading ? 'animate-pulse' : ''}`}></i> 
-              {isLoading ? 'Loading...' : 'Import Folder'}
+              {isLoading ? t.buttons.loading : t.buttons.importFolder}
             </button>
           </div>
   
@@ -560,7 +566,7 @@ const App: React.FC = () => {
              disabled={stats.rejected === 0}
              className={`px-4 py-2 border rounded-lg text-[11px] font-bold transition-all disabled:opacity-30 disabled:pointer-events-none ${theme === 'dark' ? 'bg-rose-500/10 hover:bg-rose-500 text-rose-500 hover:text-white border-rose-500/30' : 'bg-rose-50 hover:bg-rose-500 text-rose-600 hover:text-white border-rose-300'}`}
           >
-            <i className="fa-solid fa-trash-can mr-2"></i> Confirm {stats.rejected} Rejects
+            <i className="fa-solid fa-trash-can mr-2"></i> {language === 'zh' ? `确认删除 ${stats.rejected} 项` : `Confirm ${stats.rejected} Rejects`}
           </button>
   
           <div className="relative" ref={exportMenuRef}>
@@ -575,13 +581,13 @@ const App: React.FC = () => {
               disabled={stats.picked === 0}
               className={`px-5 py-2 rounded-lg text-[11px] font-bold shadow-lg flex items-center gap-2 transition-all disabled:opacity-30 disabled:pointer-events-none ${theme === 'dark' ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-600/20' : 'bg-indigo-500 hover:bg-indigo-600 text-white shadow-indigo-500/30'}`}
             >
-              <i className="fa-solid fa-paper-plane"></i> Export Picks
+              <i className="fa-solid fa-paper-plane"></i> {t.buttons.exportPicks}
             </button>
             {showExportMenu && (
               <div className={`absolute top-full right-0 mt-2 w-44 border rounded-xl shadow-2xl z-50 p-1 flex flex-col ${theme === 'dark' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-gray-200'}`}>
-                <button onClick={() => { handleExportStart('JPG'); setShowExportMenu(false); }} className={`px-4 py-2.5 text-[10px] font-bold text-left rounded-lg transition-colors ${theme === 'dark' ? 'text-zinc-400 hover:bg-zinc-800 hover:text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'}`}>JPG ONLY</button>
-                <button onClick={() => { handleExportStart('RAW'); setShowExportMenu(false); }} className={`px-4 py-2.5 text-[10px] font-bold text-left rounded-lg transition-colors ${theme === 'dark' ? 'text-zinc-400 hover:bg-zinc-800 hover:text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'}`}>RAW ONLY</button>
-                <button onClick={() => { handleExportStart('BOTH'); setShowExportMenu(false); }} className={`px-4 py-2.5 text-[10px] font-bold text-left rounded-lg transition-colors border-t mt-1 pt-2 ${theme === 'dark' ? 'text-zinc-400 hover:bg-zinc-800 hover:text-white border-zinc-800' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 border-gray-200'}`}>RAW + JPG</button>
+                <button onClick={() => { handleExportStart('JPG'); setShowExportMenu(false); }} className={`px-4 py-2.5 text-[10px] font-bold text-left rounded-lg transition-colors ${theme === 'dark' ? 'text-zinc-400 hover:bg-zinc-800 hover:text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'}`}>{t.exportMenu.jpgOnly}</button>
+                <button onClick={() => { handleExportStart('RAW'); setShowExportMenu(false); }} className={`px-4 py-2.5 text-[10px] font-bold text-left rounded-lg transition-colors ${theme === 'dark' ? 'text-zinc-400 hover:bg-zinc-800 hover:text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'}`}>{t.exportMenu.rawOnly}</button>
+                <button onClick={() => { handleExportStart('BOTH'); setShowExportMenu(false); }} className={`px-4 py-2.5 text-[10px] font-bold text-left rounded-lg transition-colors border-t mt-1 pt-2 ${theme === 'dark' ? 'text-zinc-400 hover:bg-zinc-800 hover:text-white border-zinc-800' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 border-gray-200'}`}>{t.exportMenu.rawAndJpg}</button>
               </div>
             )}
           </div>
@@ -589,7 +595,7 @@ const App: React.FC = () => {
           <button
             onClick={() => setShowSettings(!showSettings)}
             className={`w-9 h-9 flex items-center justify-center rounded-lg transition-all ${theme === 'dark' ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-zinc-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-600 hover:text-gray-800'}`}
-            title={language === 'zh' ? '设置' : 'Settings'}
+            title={t.settings.title}
           >
             <i className="fa-solid fa-gear text-sm"></i>
           </button>
@@ -599,21 +605,21 @@ const App: React.FC = () => {
             <button
               onClick={handleMinimize}
               className={`w-8 h-8 flex items-center justify-center rounded transition-colors ${theme === 'dark' ? 'hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200' : 'hover:bg-gray-200 text-gray-500 hover:text-gray-700'}`}
-              title="最小化"
+              title={t.window.minimize}
             >
               <i className="fa-solid fa-window-minimize text-[10px]"></i>
             </button>
             <button
               onClick={handleMaximize}
               className={`w-8 h-8 flex items-center justify-center rounded transition-colors ${theme === 'dark' ? 'hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200' : 'hover:bg-gray-200 text-gray-500 hover:text-gray-700'}`}
-              title="最大化/还原"
+              title={t.window.maximize}
             >
               <i className="fa-regular fa-window-maximize text-xs"></i>
             </button>
             <button
               onClick={handleClose}
               className={`w-8 h-8 flex items-center justify-center rounded hover:bg-red-600 transition-colors hover:text-white ${theme === 'dark' ? 'text-zinc-400' : 'text-gray-500'}`}
-              title="关闭"
+              title={t.window.close}
             >
               <i className="fa-solid fa-xmark text-sm"></i>
             </button>
@@ -631,16 +637,16 @@ const App: React.FC = () => {
                 <i className="fa-solid fa-plus text-sm"></i>
               </div>
             </div>
-            <h2 className={`text-3xl font-black mb-3 tracking-tighter uppercase ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>Ready for your shoot?</h2>
+            <h2 className={`text-3xl font-black mb-3 tracking-tighter uppercase ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{t.emptyState.title}</h2>
             <p className={`max-w-md text-lg font-medium leading-snug ${theme === 'dark' ? 'text-zinc-500' : 'text-gray-500'}`}>
-              Import a folder or selection of files. We'll automatically pair your RAW and JPG files for consistent management.
+              {t.emptyState.description}
             </p>
           </div>
         ) : (
           <>
             {/* Viewer Component */}
             {currentPhoto && (
-              <Viewer group={currentPhoto} animationClass={animationClass} onUpdateSelection={updateSelection} theme={theme} />
+              <Viewer group={currentPhoto} animationClass={animationClass} onUpdateSelection={updateSelection} theme={theme} language={language} />
             )}
 
             {/* Filmstrip / Thumbnails */}
@@ -677,41 +683,39 @@ const App: React.FC = () => {
       {/* Modals */}
       {showDeleteConfirm && (
         <ConfirmationModal 
-          title="Move to Trash"
-          confirmLabel="Move to Trash"
           type="delete"
           groups={photos.filter(p => p.selection === SelectionState.REJECTED)}
           onConfirm={executeFinalDelete}
           onCancel={() => setShowDeleteConfirm(false)}
           theme={theme}
+          language={language}
         />
       )}
       
       {showExportConfirm && (
         <ConfirmationModal 
-          title="Export Selected"
-          confirmLabel={`Export as ${exportMode}`}
           type="export"
           groups={photos.filter(p => p.selection === SelectionState.PICKED)}
           onConfirm={executeExport}
           onCancel={() => setShowExportConfirm(false)}
           theme={theme}
+          language={language}
         />
       )}
 
       {/* Footer Info / Insight */}
       <footer className={`h-10 border-t px-6 flex items-center justify-between text-[10px] z-20 ${theme === 'dark' ? 'bg-zinc-950 border-zinc-800 text-zinc-500' : 'bg-white border-gray-200 text-gray-500'}`}>
         <div className="flex gap-4">
-          <span>{stats.total} TOTAL</span>
-          <span className="text-emerald-500 font-bold">{stats.picked} PICKED</span>
-          <span className="text-rose-500 font-bold">{stats.rejected} STAGED FOR TRASH</span>
-          <span className="text-amber-500 font-bold">{stats.orphans} ORPHANS</span>
+          <span>{stats.total} {t.footer.total}</span>
+          <span className="text-emerald-500 font-bold">{stats.picked} {t.footer.picked}</span>
+          <span className="text-rose-500 font-bold">{stats.rejected} {t.footer.stagedForTrash}</span>
+          <span className="text-amber-500 font-bold">{stats.orphans} {t.footer.orphans}</span>
         </div>
 
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 max-w-md truncate italic text-zinc-400">
             <i className="fa-solid fa-sparkles text-indigo-400"></i>
-            {aiInsight || "Press the wand icon in sidebar for session analysis."}
+            {aiInsight || t.footer.aiInsightPlaceholder}
           </div>
           <button 
             onClick={getAiInsight}
