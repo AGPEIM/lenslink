@@ -51,8 +51,26 @@ export const translations = {
     
     // 空白状态
     emptyState: {
-      title: '准备好导入照片了吗？',
-      description: '导入文件夹或选择文件。我们会自动配对您的 RAW 和 JPG 文件以便统一管理。'
+      all: {
+        title: '准备好导入照片了吗？',
+        description: '导入文件夹或选择文件。我们会自动配对您的 RAW 和 JPG 文件以便统一管理。'
+      },
+      picked: {
+        title: '暂无精选照片',
+        description: '还没有标记为精选的照片。浏览照片并按 P 键或点击"精选"按钮来精选照片。'
+      },
+      rejected: {
+        title: '暂无待删除照片',
+        description: '还没有标记为待删除的照片。浏览照片并按 X 键或点击"删除"按钮来标记删除。'
+      },
+      unmarked: {
+        title: '暂无未标记照片',
+        description: '所有照片都已标记。'
+      },
+      orphans: {
+        title: '暂无单独文件',
+        description: '所有照片都已完整配对。没有找到单独的 RAW 或 JPG 文件。'
+      }
     },
     
     // 页脚统计
@@ -256,8 +274,26 @@ export const translations = {
     
     // Empty state
     emptyState: {
-      title: 'Ready for your shoot?',
-      description: 'Import a folder or selection of files. We\'ll automatically pair your RAW and JPG files for consistent management.'
+      all: {
+        title: 'Ready for your shoot?',
+        description: 'Import a folder or selection of files. We\'ll automatically pair your RAW and JPG files for consistent management.'
+      },
+      picked: {
+        title: 'No Picked Photos',
+        description: 'You haven\'t picked any photos yet. Browse through your photos and press P or click the "Pick" button to select favorites.'
+      },
+      rejected: {
+        title: 'No Rejected Photos',
+        description: 'You haven\'t rejected any photos yet. Browse through your photos and press X or click the "Reject" button to mark for deletion.'
+      },
+      unmarked: {
+        title: 'No Unmarked Photos',
+        description: 'All photos have been marked.'
+      },
+      orphans: {
+        title: 'No Orphan Files',
+        description: 'All photos are properly paired. No standalone RAW or JPG files found.'
+      }
     },
     
     // Footer statistics
