@@ -1,11 +1,110 @@
 import LibRaw from 'libraw-wasm';
 import { readFile } from '@tauri-apps/plugin-fs';
 
+// Cache configuration
+const MAX_CACHE_SIZE = 50; // 最多缓存50张全尺寸图片
+const MAX_THUMBNAIL_CACHE_SIZE = 200; // 最多缓存200张缩略图
+
 // Cache for decoded RAW images (only store full decode result)
 const rawImageCache = new Map<string, string>();
+const thumbnailCache = new Map<string, string>();
+
+// Track cache access order for LRU eviction
+const cacheAccessOrder: string[] = [];
+const thumbnailAccessOrder: string[] = [];
 
 // Track ongoing decode operations to prevent duplicate work
 const ongoingDecodes = new Map<string, Promise<string>>();
+
+/**
+ * LRU cache eviction for full images
+ */
+function evictLRUCache() {
+  while (rawImageCache.size >= MAX_CACHE_SIZE && cacheAccessOrder.length > 0) {
+    const oldestKey = cacheAccessOrder.shift();
+    if (oldestKey) {
+      rawImageCache.delete(oldestKey);
+      console.log(`[RAW Cache] Evicted: ${oldestKey}`);
+    }
+  }
+}
+
+/**
+ * LRU cache eviction for thumbnails
+ */
+function evictThumbnailCache() {
+  while (thumbnailCache.size >= MAX_THUMBNAIL_CACHE_SIZE && thumbnailAccessOrder.length > 0) {
+    const oldestKey = thumbnailAccessOrder.shift();
+    if (oldestKey) {
+      thumbnailCache.delete(oldestKey);
+    }
+  }
+}
+
+/**
+ * Update cache access order (move to end = most recently used)
+ */
+function touchCache(filePath: string, isThumbnail: boolean = false) {
+  const orderList = isThumbnail ? thumbnailAccessOrder : cacheAccessOrder;
+  const idx = orderList.indexOf(filePath);
+  if (idx > -1) {
+    orderList.splice(idx, 1);
+  }
+  orderList.push(filePath);
+}
+
+/**
+ * Get thumbnail from cache without triggering decode
+ * Used for quick cache lookup by LazyThumbnail component
+ */
+export function getThumbnailFromCache(filePath: string): string | null {
+  if (thumbnailCache.has(filePath)) {
+    touchCache(filePath, true);
+    return thumbnailCache.get(filePath)!;
+  }
+  
+  // If full image is cached, we can generate thumbnail from it
+  if (rawImageCache.has(filePath)) {
+    return null; // Let the caller decide to generate thumbnail
+  }
+  
+  return null;
+}
+
+/**
+ * Get full image from cache without triggering decode
+ * Used for preloading check
+ */
+export function getImageFromCache(filePath: string): string | null {
+  if (rawImageCache.has(filePath)) {
+    touchCache(filePath, false);
+    return rawImageCache.get(filePath)!;
+  }
+  return null;
+}
+
+/**
+ * Check if a file is currently being decoded
+ */
+export function isDecoding(filePath: string): boolean {
+  return ongoingDecodes.has(filePath);
+}
+
+/**
+ * Preload a RAW file into cache (non-blocking)
+ * Used for prefetching adjacent images
+ */
+export function preloadRawFile(filePath: string): void {
+  // Skip if already cached or decoding
+  if (rawImageCache.has(filePath) || ongoingDecodes.has(filePath)) {
+    return;
+  }
+  
+  // Start decode in background (fire and forget)
+  decodeRawFile(filePath, false).catch(() => {
+    // Silently ignore preload errors
+  });
+}
 
 /**
  * Decode a RAW file and return a data URL for display
@@ -15,14 +114,26 @@ const ongoingDecodes = new Map<string, Promise<string>>();
 export async function decodeRawFile(filePath: string, thumbnail: boolean = false): Promise<string> {
   const startTime = performance.now();
   
-  // Check cache first - we only cache the full decode
+  // Check thumbnail cache first (if requesting thumbnail)
+  if (thumbnail && thumbnailCache.has(filePath)) {
+    touchCache(filePath, true);
+    console.log(`[RAW Thumbnail Cache Hit] ${(performance.now() - startTime).toFixed(1)}ms`);
+    return thumbnailCache.get(filePath)!;
+  }
+  
+  // Check full image cache
   if (rawImageCache.has(filePath)) {
     const cachedDataUrl = rawImageCache.get(filePath)!;
+    touchCache(filePath, false);
     
     // If requesting thumbnail, scale down the cached full image
     if (thumbnail) {
       console.log(`[RAW Cache Hit] Generating thumbnail from cached full image`);
       const thumbnailUrl = await createThumbnailFromDataUrl(cachedDataUrl);
+      // Cache the generated thumbnail
+      evictThumbnailCache();
+      thumbnailCache.set(filePath, thumbnailUrl);
+      touchCache(filePath, true);
       console.log(`[RAW Cache] Thumbnail generated in ${(performance.now() - startTime).toFixed(1)}ms`);
       return thumbnailUrl;
     }
@@ -38,7 +149,11 @@ export async function decodeRawFile(filePath: string, thumbnail: boolean = false
     
     // If requesting thumbnail, scale down the result
     if (thumbnail) {
-      return createThumbnailFromDataUrl(fullDataUrl);
+      const thumbnailUrl = await createThumbnailFromDataUrl(fullDataUrl);
+      evictThumbnailCache();
+      thumbnailCache.set(filePath, thumbnailUrl);
+      touchCache(filePath, true);
+      return thumbnailUrl;
     }
     return fullDataUrl;
   }
@@ -194,10 +309,12 @@ export async function decodeRawFile(filePath: string, thumbnail: boolean = false
     const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
     console.log(`[RAW] 10. toDataURL: ${(performance.now() - t10).toFixed(1)}ms`);
     
-    // Cache the full-size result
+    // Cache the full-size result with LRU eviction
+    evictLRUCache();
     rawImageCache.set(filePath, dataUrl);
+    touchCache(filePath, false);
     
-    console.log(`[RAW TOTAL] Full decode completed in ${(performance.now() - startTime).toFixed(1)}ms`);
+    console.log(`[RAW TOTAL] Full decode completed in ${(performance.now() - startTime).toFixed(1)}ms (cache size: ${rawImageCache.size})`);
     console.log('---');
     
     return dataUrl;
@@ -216,10 +333,14 @@ export async function decodeRawFile(filePath: string, thumbnail: boolean = false
   // Wait for decode to complete
   const fullDataUrl = await decodePromise;
   
-  // If thumbnail requested, scale down from the full image
+  // If thumbnail requested, scale down from the full image and cache
   if (thumbnail) {
     const thumbStart = performance.now();
     const thumbnailUrl = await createThumbnailFromDataUrl(fullDataUrl);
+    // Cache the thumbnail
+    evictThumbnailCache();
+    thumbnailCache.set(filePath, thumbnailUrl);
+    touchCache(filePath, true);
     console.log(`[RAW] Thumbnail scaled from full image in ${(performance.now() - thumbStart).toFixed(1)}ms`);
     return thumbnailUrl;
   }
@@ -264,10 +385,25 @@ async function createThumbnailFromDataUrl(dataUrl: string): Promise<string> {
 }
 
 /**
- * Clear the RAW image cache
+ * Clear all RAW image caches
  */
 export function clearRawCache() {
   rawImageCache.clear();
+  thumbnailCache.clear();
+  cacheAccessOrder.length = 0;
+  thumbnailAccessOrder.length = 0;
+  console.log('[RAW Cache] All caches cleared');
+}
+
+/**
+ * Get cache statistics
+ */
+export function getCacheStats() {
+  return {
+    fullImageCount: rawImageCache.size,
+    thumbnailCount: thumbnailCache.size,
+    ongoingDecodes: ongoingDecodes.size,
+  };
 }
 
 /**

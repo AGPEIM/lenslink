@@ -1,14 +1,13 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { PhotoGroup, SelectionState, GroupStatus, ExportMode, ExportOperation } from './types';
-import { analyzeSession } from './services/geminiService';
 import Viewer from './components/Viewer';
+import LazyThumbnail from './components/LazyThumbnail';
 import ConfirmationModal from './components/ConfirmationModal';
 import SettingsPanel from './components/SettingsPanel';
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { decodeRawFile } from './utils/rawLoader';
 import { getTranslations, Language } from './i18n';
 
 const App: React.FC = () => {
@@ -36,8 +35,14 @@ const App: React.FC = () => {
 
   // Settings
   const [showSettings, setShowSettings] = useState(false);
-  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
-  const [language, setLanguage] = useState<Language>('zh');
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    const saved = localStorage.getItem('lenslink-theme');
+    return (saved === 'light' || saved === 'dark') ? saved : 'dark';
+  });
+  const [language, setLanguage] = useState<Language>(() => {
+    const saved = localStorage.getItem('lenslink-language');
+    return (saved === 'zh' || saved === 'en') ? saved : 'zh';
+  });
   const t = getTranslations(language);
 
   // Window controls
@@ -60,57 +65,14 @@ const App: React.FC = () => {
     appWindow.close();
   };
 
-  // Thumbnail component for lazy loading RAW previews
-  const ThumbnailImage: React.FC<{ group: PhotoGroup }> = ({ group }) => {
-    const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
-    const [isLoading, setIsLoading] = useState(false);
+  // Persist theme and language settings
+  useEffect(() => {
+    localStorage.setItem('lenslink-theme', theme);
+  }, [theme]);
 
-    useEffect(() => {
-      // If JPG exists, use it directly
-      if (group.jpg?.previewUrl) {
-        setThumbnailUrl(group.jpg.previewUrl);
-        return;
-      }
-
-      // If only RAW exists, decode it as thumbnail
-      if (group.raw?.path) {
-        setIsLoading(true);
-        decodeRawFile(group.raw.path, true) // true = thumbnail mode
-          .then(dataUrl => {
-            setThumbnailUrl(dataUrl);
-            setIsLoading(false);
-          })
-          .catch(error => {
-            console.error('Failed to load RAW thumbnail:', error);
-            setIsLoading(false);
-          });
-      }
-    }, [group.id, group.jpg, group.raw]);
-
-    if (isLoading) {
-      return (
-        <div className="w-full h-full bg-zinc-800 flex items-center justify-center">
-          <i className="fa-solid fa-spinner fa-spin text-zinc-600 text-xs"></i>
-        </div>
-      );
-    }
-
-    if (!thumbnailUrl) {
-      return (
-        <div className="w-full h-full bg-zinc-800 flex items-center justify-center">
-          <i className="fa-solid fa-file-image text-zinc-600 text-xs"></i>
-        </div>
-      );
-    }
-
-    return (
-      <img 
-        src={thumbnailUrl} 
-        className="w-full h-full object-cover" 
-        alt={group.id} 
-      />
-    );
-  };
+  useEffect(() => {
+    localStorage.setItem('lenslink-language', language);
+  }, [language]);
 
   // 转换Rust返回的数据为前端格式
   const convertRustGroupsToPhotoGroups = (rustGroups: any[]): PhotoGroup[] => {
@@ -793,7 +755,7 @@ const App: React.FC = () => {
                     selectedIndex === idx ? 'border-indigo-500 scale-105 z-10' : 'border-transparent opacity-60 hover:opacity-100 hover:border-zinc-700'
                   }`}
                  >
-                   <ThumbnailImage group={p} />
+                   <LazyThumbnail group={p} />
                    
                    {/* Selection Marker */}
                    {p.selection === SelectionState.PICKED && <div className="absolute inset-0 border-4 border-emerald-500/50 bg-emerald-500/10 flex items-center justify-center"><i className="fa-solid fa-flag text-emerald-500 text-xs"></i></div>}
@@ -867,19 +829,6 @@ const App: React.FC = () => {
           <span className="text-amber-500 font-bold">{stats.orphans} {t.footer.orphans}</span>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 max-w-md truncate italic text-zinc-400">
-            <i className="fa-solid fa-sparkles text-indigo-400"></i>
-            {aiInsight || t.footer.aiInsightPlaceholder}
-          </div>
-          <button 
-            onClick={getAiInsight}
-            disabled={isAnalyzing || photos.length === 0}
-            className="hover:text-indigo-400 transition-colors disabled:opacity-0"
-          >
-            <i className={`fa-solid fa-wand-magic-sparkles ${isAnalyzing ? 'animate-spin' : ''}`}></i>
-          </button>
-        </div>
       </footer>
 
       {/* Settings Panel */}

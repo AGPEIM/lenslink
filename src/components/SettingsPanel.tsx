@@ -31,7 +31,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
       />
       
       {/* Settings Panel */}
-      <div className={`fixed top-16 right-6 w-80 border rounded-xl shadow-2xl z-50 overflow-hidden ${theme === 'dark' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-gray-200'}`}>
+      <div className={`fixed top-16 right-6 w-96 border rounded-xl shadow-2xl z-50 overflow-hidden ${theme === 'dark' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-gray-200'}`}>
         {/* Header */}
         <div className={`px-6 py-4 border-b flex items-center justify-between ${theme === 'dark' ? 'border-zinc-800' : 'border-gray-200'}`}>
           <h3 className={`text-lg font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{t.settings.title}</h3>

@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { PhotoGroup, SelectionState } from '../types';
 import { formatSize } from '../utils/fileHelpers';
-import { decodeRawFile } from '../utils/rawLoader';
+import { decodeRawFile, getImageFromCache, preloadRawFile } from '../utils/rawLoader';
 import { getTranslations, Language } from '../i18n';
 
 interface ViewerProps {
@@ -18,35 +18,88 @@ const Viewer: React.FC<ViewerProps> = ({ group, animationClass, onUpdateSelectio
   const [zoom, setZoom] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
-  const [rawPreviewUrl, setRawPreviewUrl] = useState<string | null>(null);
+  
+  // 使用双缓冲策略消除闪烁：保持当前显示的图片直到新图片加载完成
+  const [displayUrl, setDisplayUrl] = useState<string | null>(null);
+  const [nextUrl, setNextUrl] = useState<string | null>(null);
   const [isLoadingRaw, setIsLoadingRaw] = useState(false);
   const [rawError, setRawError] = useState<string | null>(null);
+  const [imageReady, setImageReady] = useState(false);
+  
   const containerRef = useRef<HTMLDivElement>(null);
   const lastMousePos = useRef({ x: 0, y: 0 });
+  const currentGroupId = useRef<string | null>(null);
 
-  // Load RAW preview if no JPG is available
+  // Load image for current group (RAW decoding or JPG)
   useEffect(() => {
-    if (!group.jpg && group.raw && group.raw.path) {
+    // 避免重复加载同一组
+    if (currentGroupId.current === group.id && displayUrl) {
+      return;
+    }
+    currentGroupId.current = group.id;
+
+    // 如果有 JPG，直接使用（不需要闪烁处理）
+    if (group.jpg) {
+      setDisplayUrl(group.jpg.previewUrl);
+      setIsLoadingRaw(false);
+      setRawError(null);
+      setImageReady(true);
+      return;
+    }
+
+    // 只有 RAW 文件时，需要解码
+    if (group.raw && group.raw.path) {
+      // 先检查缓存
+      const cachedUrl = getImageFromCache(group.raw.path);
+      if (cachedUrl) {
+        setDisplayUrl(cachedUrl);
+        setIsLoadingRaw(false);
+        setRawError(null);
+        setImageReady(true);
+        return;
+      }
+
+      // 缓存未命中，开始解码（但保持当前图片显示）
       setIsLoadingRaw(true);
       setRawError(null);
-      setRawPreviewUrl(null);
       
       decodeRawFile(group.raw.path, false) // false = full quality for viewer
         .then(dataUrl => {
-          setRawPreviewUrl(dataUrl);
-          setIsLoadingRaw(false);
+          // 只有当这个请求仍然是当前组时才更新
+          if (currentGroupId.current === group.id) {
+            setNextUrl(dataUrl);
+          }
         })
         .catch(error => {
           console.error('Failed to load RAW preview:', error);
-          setRawError(error.message || 'Failed to decode RAW file');
-          setIsLoadingRaw(false);
+          if (currentGroupId.current === group.id) {
+            setRawError(error.message || 'Failed to decode RAW file');
+            setIsLoadingRaw(false);
+          }
         });
     } else {
-      setRawPreviewUrl(null);
+      // 没有可显示的图片
+      setDisplayUrl(null);
       setIsLoadingRaw(false);
       setRawError(null);
+      setImageReady(false);
     }
   }, [group.id, group.jpg, group.raw]);
+
+  // 当新图片准备好时，平滑切换
+  useEffect(() => {
+    if (nextUrl) {
+      // 预加载新图片
+      const img = new Image();
+      img.onload = () => {
+        setDisplayUrl(nextUrl);
+        setNextUrl(null);
+        setIsLoadingRaw(false);
+        setImageReady(true);
+      };
+      img.src = nextUrl;
+    }
+  }, [nextUrl]);
 
   // Reset zoom when switching photos
   useEffect(() => {
@@ -120,21 +173,22 @@ const Viewer: React.FC<ViewerProps> = ({ group, animationClass, onUpdateSelectio
         onDoubleClick={resetZoom}
       >
         <div 
-          className="transition-transform duration-75 ease-out will-change-transform max-w-full max-h-full flex items-center justify-center"
+          className="transition-transform duration-75 ease-out will-change-transform max-w-full max-h-full flex items-center justify-center relative"
           style={{ 
             transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`,
             cursor: zoom > 1 ? (isDragging ? 'grabbing' : 'grab') : 'default'
           }}
         >
-          {group.jpg ? (
+          {/* 主图片显示 - 使用 displayUrl 实现无闪烁切换 */}
+          {displayUrl ? (
             <img 
-              src={group.jpg.previewUrl} 
+              src={displayUrl} 
               alt={group.id}
               draggable={false}
-              className="max-w-full max-h-[calc(100vh-8rem)] w-auto h-auto object-contain shadow-[0_0_100px_rgba(0,0,0,0.5)] rounded-sm select-none"
+              className={`max-w-full max-h-[calc(100vh-8rem)] w-auto h-auto object-contain shadow-[0_0_100px_rgba(0,0,0,0.5)] rounded-sm select-none transition-opacity duration-200 ${imageReady ? 'opacity-100' : 'opacity-0'}`}
             />
-          ) : isLoadingRaw ? (
-            // Loading RAW file
+          ) : isLoadingRaw && !displayUrl ? (
+            // Loading RAW file (only show when no previous image to display)
             <div className="flex flex-col items-center justify-center gap-6 p-12">
               <div className="w-32 h-32 bg-indigo-600/10 rounded-full flex items-center justify-center border-4 border-indigo-600/30 animate-pulse">
                 <i className="fa-solid fa-spinner fa-spin text-6xl text-indigo-400"></i>
@@ -165,14 +219,6 @@ const Viewer: React.FC<ViewerProps> = ({ group, animationClass, onUpdateSelectio
                 </div>
               </div>
             </div>
-          ) : rawPreviewUrl ? (
-            // RAW preview successfully decoded
-            <img 
-              src={rawPreviewUrl} 
-              alt={group.id}
-              draggable={false}
-              className="max-w-full max-h-[calc(100vh-8rem)] w-auto h-auto object-contain shadow-[0_0_100px_rgba(0,0,0,0.5)] rounded-sm select-none"
-            />
           ) : (
             // Fallback placeholder
             <div className="flex flex-col items-center justify-center gap-6 p-12 bg-zinc-900/50 rounded-2xl border-2 border-dashed border-zinc-700/50 shadow-2xl">
@@ -188,6 +234,16 @@ const Viewer: React.FC<ViewerProps> = ({ group, animationClass, onUpdateSelectio
                     <>{t.viewer.noPreview.noImageFound}</>
                   )}
                 </p>
+              </div>
+            </div>
+          )}
+          
+          {/* 加载指示器覆盖层 - 当有图片显示但正在加载新图片时 */}
+          {isLoadingRaw && displayUrl && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-[1px] rounded-sm">
+              <div className="bg-black/60 px-4 py-2 rounded-full flex items-center gap-2">
+                <i className="fa-solid fa-spinner fa-spin text-indigo-400"></i>
+                <span className="text-sm text-zinc-300">{t.viewer.rawLoading.title}</span>
               </div>
             </div>
           )}
@@ -277,11 +333,6 @@ const Viewer: React.FC<ViewerProps> = ({ group, animationClass, onUpdateSelectio
           {group.raw && <FileItem ext={group.raw.extension} size={formatSize(group.raw.size)} isRaw theme={theme} />}
         </section>
         
-        <div className={`pt-4 text-[10px] italic leading-relaxed ${theme === 'dark' ? 'text-zinc-500' : 'text-gray-500'}`}>
-          <p>{t.viewer.tips.mouseWheel}</p>
-          <p>{t.viewer.tips.dragToPan}</p>
-          <p>{t.viewer.tips.doubleClick}</p>
-        </div>
         </div>
 
         {/* Fixed Rating Actions at bottom */}
