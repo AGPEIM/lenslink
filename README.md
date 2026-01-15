@@ -107,7 +107,7 @@ Download the latest release for your platform:
 - **macOS**: `LensLink_aarch64.dmg` (Apple Silicon) / `LensLink_x64.dmg` (Intel)
 - **Linux**: `LensLink_amd64.AppImage` or `.deb`
 
-👉 [Download from Releases](https://github.com/yourusername/lenslink/releases)
+👉 [Download from Releases](https://github.com/AGPEIM/lenslink/releases)
 
 ### Build from Source
 
@@ -239,8 +239,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📧 Contact & Support
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/lenslink/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/lenslink/discussions)
+- **Issues**: [GitHub Issues](https://github.com/AGPEIM/lenslink/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/AGPEIM/lenslink/discussions)
 
 ---
 
