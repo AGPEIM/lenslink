@@ -74,6 +74,29 @@ const App: React.FC = () => {
     localStorage.setItem('lenslink-language', language);
   }, [language]);
 
+  // Show window after app is ready
+  useEffect(() => {
+    const showWindow = async () => {
+      try {
+        await invoke('show_main_window');
+        // Hide loading screen
+        const loadingEl = document.getElementById('app-loading');
+        if (loadingEl) {
+          loadingEl.classList.add('fade-out');
+          setTimeout(() => {
+            loadingEl.style.display = 'none';
+          }, 300);
+        }
+      } catch (error) {
+        console.error('Failed to show window:', error);
+      }
+    };
+    
+    // Wait a bit to ensure React has rendered
+    const timer = setTimeout(showWindow, 100);
+    return () => clearTimeout(timer);
+  }, []);
+
   // 转换Rust返回的数据为前端格式
   const convertRustGroupsToPhotoGroups = (rustGroups: any[]): PhotoGroup[] => {
     return rustGroups.map(group => ({
@@ -518,12 +541,6 @@ const App: React.FC = () => {
     }
   };
 
-  const getAiInsight = async () => {
-    setIsAnalyzing(true);
-    const insight = await analyzeSession(stats);
-    setAiInsight(insight);
-    setIsAnalyzing(false);
-  };
 
   // Shortcut handling
   useEffect(() => {

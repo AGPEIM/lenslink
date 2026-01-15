@@ -21,9 +21,75 @@
       ::-webkit-scrollbar-track { background: transparent; }
       ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 10px; }
       ::-webkit-scrollbar-thumb:hover { background: #52525b; }
+
+      /* Startup loading styles */
+      #app-loading {
+        position: fixed;
+        inset: 0;
+        background: linear-gradient(135deg, #09090b 0%, #18181b 100%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        transition: opacity 0.3s ease-out;
+      }
+      #app-loading.fade-out {
+        opacity: 0;
+        pointer-events: none;
+      }
+      .loading-logo {
+        width: 80px;
+        height: 80px;
+        background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 20px 60px rgba(79, 70, 229, 0.4);
+        animation: pulse 2s ease-in-out infinite;
+        transform: rotate(3deg);
+      }
+      .loading-logo i {
+        color: white;
+        font-size: 36px;
+      }
+      .loading-text {
+        margin-top: 24px;
+        color: #a1a1aa;
+        font-size: 14px;
+        font-weight: 600;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+      }
+      .loading-spinner {
+        margin-top: 16px;
+        width: 40px;
+        height: 40px;
+        border: 3px solid #27272a;
+        border-top-color: #6366f1;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes pulse {
+        0%, 100% { transform: rotate(3deg) scale(1); }
+        50% { transform: rotate(3deg) scale(1.05); }
+      }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
     </style>
   </head>
   <body class="bg-zinc-950 text-zinc-100 min-h-screen overflow-hidden">
+    <!-- Startup Loading Screen -->
+    <div id="app-loading">
+      <div class="loading-logo">
+        <i class="fa-solid fa-camera-retro"></i>
+      </div>
+      <div class="loading-text">LensLink</div>
+      <div class="loading-spinner"></div>
+    </div>
+    
     <div id="root"></div>
     <script type="module" src="/src/index.tsx"></script>
   </body>

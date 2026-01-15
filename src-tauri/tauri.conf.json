@@ -17,7 +17,9 @@
         "width": 1200,
         "height": 800,
         "decorations": false,
-        "transparent": false
+        "transparent": false,
+        "visible": false,
+        "center": true
       }
     ],
     "security": {

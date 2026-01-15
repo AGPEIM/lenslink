@@ -524,6 +524,13 @@ fn export_files(
     }
 }
 
+#[tauri::command]
+async fn show_main_window(window: tauri::Window) -> Result<(), String> {
+    window.show().map_err(|e| e.to_string())?;
+    window.set_focus().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -531,7 +538,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
-        .invoke_handler(tauri::generate_handler![greet, read_exif, scan_folder, scan_files, move_to_trash, export_files])
+        .invoke_handler(tauri::generate_handler![greet, read_exif, scan_folder, scan_files, move_to_trash, export_files, show_main_window])
         .setup(|app| {
             // Ensure window decorations are disabled at runtime
             #[cfg(desktop)]
@@ -539,6 +546,7 @@ pub fn run() {
                 use tauri::Manager;
                 let window = app.get_webview_window("main").unwrap();
                 window.set_decorations(false).unwrap();
+                // Window will be shown after frontend is ready via show_main_window command
             }
             Ok(())
         })
