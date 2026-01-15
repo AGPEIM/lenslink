@@ -24,6 +24,8 @@ const App: React.FC = () => {
   // Modals
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showExportConfirm, setShowExportConfirm] = useState(false);
+  const [showOrphanDeleteConfirm, setShowOrphanDeleteConfirm] = useState(false);
+  const [orphanDeleteType, setOrphanDeleteType] = useState<'RAW' | 'JPG' | null>(null);
   const [exportMode, setExportMode] = useState<ExportMode>('BOTH');
   const [showExportMenu, setShowExportMenu] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement>(null);
@@ -295,6 +297,8 @@ const App: React.FC = () => {
       picked: photos.filter(p => p.selection === SelectionState.PICKED).length,
       rejected: photos.filter(p => p.selection === SelectionState.REJECTED).length,
       orphans: photos.filter(p => p.status !== GroupStatus.COMPLETE).length,
+      orphanRaw: photos.filter(p => p.status === GroupStatus.RAW_ONLY).length,
+      orphanJpg: photos.filter(p => p.status === GroupStatus.JPG_ONLY).length,
       unmarked: photos.filter(p => p.selection === SelectionState.UNMARKED).length,
     };
   }, [photos]);
@@ -377,6 +381,97 @@ const App: React.FC = () => {
       console.error('Failed to move files to trash:', error);
       alert(`${t.messages.deleteFailed}: ${error}`);
       setShowDeleteConfirm(false);
+    }
+  };
+
+  const handleOrphanDeleteStart = (type: 'RAW' | 'JPG') => {
+    const orphanGroups = photos.filter(p => {
+      if (type === 'RAW') {
+        return p.status === GroupStatus.RAW_ONLY;
+      } else {
+        return p.status === GroupStatus.JPG_ONLY;
+      }
+    });
+
+    if (orphanGroups.length === 0) {
+      alert(type === 'RAW' ? t.messages.noOrphanRawFiles : t.messages.noOrphanJpgFiles);
+      return;
+    }
+
+    setOrphanDeleteType(type);
+    setShowOrphanDeleteConfirm(true);
+  };
+
+  const executeOrphanDelete = async () => {
+    if (!orphanDeleteType) {
+      setShowOrphanDeleteConfirm(false);
+      return;
+    }
+
+    try {
+      // 获取要删除的孤儿文件组
+      const orphanGroups = photos.filter(p => {
+        if (orphanDeleteType === 'RAW') {
+          return p.status === GroupStatus.RAW_ONLY;
+        } else {
+          return p.status === GroupStatus.JPG_ONLY;
+        }
+      });
+
+      if (orphanGroups.length === 0) {
+        setShowOrphanDeleteConfirm(false);
+        setOrphanDeleteType(null);
+        return;
+      }
+
+      // 将组转换为 Rust 可接受的格式
+      const groupsToDelete = orphanGroups.map(group => ({
+        id: group.id,
+        jpg: group.jpg ? {
+          name: group.jpg.name,
+          extension: group.jpg.extension,
+          path: group.jpg.path,
+          size: group.jpg.size
+        } : null,
+        raw: group.raw ? {
+          name: group.raw.name,
+          extension: group.raw.extension,
+          path: group.raw.path,
+          size: group.raw.size
+        } : null,
+        status: group.status,
+        exif: group.exif || null
+      }));
+
+      // 调用 Rust 命令将文件移动到回收站
+      const movedFiles = await invoke<string[]>('move_to_trash', { groups: groupsToDelete });
+
+      // 成功移动后，从状态中移除这些组
+      setPhotos(prev => prev.filter(p => {
+        if (orphanDeleteType === 'RAW') {
+          return p.status !== GroupStatus.RAW_ONLY;
+        } else {
+          return p.status !== GroupStatus.JPG_ONLY;
+        }
+      }));
+
+      setShowOrphanDeleteConfirm(false);
+      setOrphanDeleteType(null);
+      
+      // 重置选中索引
+      if (photos.length > orphanGroups.length) {
+        setSelectedIndex(0);
+      } else {
+        setSelectedIndex(null);
+      }
+
+      alert(`${t.messages.orphanDeleteSuccess}: ${movedFiles.length} ${t.messages.files}`);
+      console.log(`Successfully moved ${movedFiles.length} orphan files to trash`);
+    } catch (error) {
+      console.error('Failed to move orphan files to trash:', error);
+      alert(`${t.messages.deleteFailed}: ${error}`);
+      setShowOrphanDeleteConfirm(false);
+      setOrphanDeleteType(null);
     }
   };
 
@@ -568,6 +663,24 @@ const App: React.FC = () => {
           >
             <i className="fa-solid fa-trash-can mr-2"></i> {language === 'zh' ? `确认删除 ${stats.rejected} 项` : `Confirm ${stats.rejected} Rejects`}
           </button>
+
+          {/* Orphan Delete Buttons */}
+          <div className={`flex rounded-lg border overflow-hidden ${theme === 'dark' ? 'bg-zinc-950 border-zinc-800/50' : 'bg-white border-gray-300/50'}`}>
+            <button 
+              onClick={() => handleOrphanDeleteStart('RAW')}
+              disabled={stats.orphanRaw === 0}
+              className={`px-3 py-2 text-[10px] font-bold flex items-center gap-1.5 transition-colors disabled:opacity-30 disabled:pointer-events-none border-r ${theme === 'dark' ? 'text-amber-400 hover:bg-amber-500/10 border-zinc-800/50' : 'text-amber-600 hover:bg-amber-50 border-gray-300/50'}`}
+            >
+              <i className="fa-solid fa-file-image"></i> {language === 'zh' ? `删RAW (${stats.orphanRaw})` : `Del RAW (${stats.orphanRaw})`}
+            </button>
+            <button 
+              onClick={() => handleOrphanDeleteStart('JPG')}
+              disabled={stats.orphanJpg === 0}
+              className={`px-3 py-2 text-[10px] font-bold flex items-center gap-1.5 transition-colors disabled:opacity-30 disabled:pointer-events-none ${theme === 'dark' ? 'text-amber-400 hover:bg-amber-500/10' : 'text-amber-600 hover:bg-amber-50'}`}
+            >
+              <i className="fa-solid fa-image"></i> {language === 'zh' ? `删JPG (${stats.orphanJpg})` : `Del JPG (${stats.orphanJpg})`}
+            </button>
+          </div>
   
           <div className="relative" ref={exportMenuRef}>
             <button 
@@ -698,6 +811,27 @@ const App: React.FC = () => {
           groups={photos.filter(p => p.selection === SelectionState.PICKED)}
           onConfirm={executeExport}
           onCancel={() => setShowExportConfirm(false)}
+          theme={theme}
+          language={language}
+        />
+      )}
+
+      {/* Orphan Delete Confirmation Modal */}
+      {showOrphanDeleteConfirm && orphanDeleteType && (
+        <ConfirmationModal 
+          type="delete"
+          groups={photos.filter(p => {
+            if (orphanDeleteType === 'RAW') {
+              return p.status === GroupStatus.RAW_ONLY;
+            } else {
+              return p.status === GroupStatus.JPG_ONLY;
+            }
+          })}
+          onConfirm={executeOrphanDelete}
+          onCancel={() => {
+            setShowOrphanDeleteConfirm(false);
+            setOrphanDeleteType(null);
+          }}
           theme={theme}
           language={language}
         />

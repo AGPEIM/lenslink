@@ -19,7 +19,9 @@ export const translations = {
       confirmRejects: '确认删除',
       exportPicks: '导出精选',
       settings: '设置',
-      loading: '加载中...'
+      loading: '加载中...',
+      deleteAllOrphanRaw: '删除所有单独RAW',
+      deleteAllOrphanJpg: '删除所有单独JPG'
     },
     
     // 导出菜单
@@ -192,7 +194,13 @@ export const translations = {
       files: '个文件到',
       selectFolder: '选择文件夹以',
       selectFolderToCopy: '复制文件到',
-      selectFolderToMove: '移动文件到'
+      selectFolderToMove: '移动文件到',
+      noOrphanRawFiles: '没有单独的RAW文件。',
+      noOrphanJpgFiles: '没有单独的JPG文件。',
+      orphanDeleteSuccess: '成功移至回收站',
+      orphanDeleteConfirm: '确认删除孤儿文件',
+      orphanRawCount: '个单独RAW文件',
+      orphanJpgCount: '个单独JPG文件'
     }
   },
   
@@ -216,7 +224,9 @@ export const translations = {
       confirmRejects: 'Confirm Rejects',
       exportPicks: 'Export Picks',
       settings: 'Settings',
-      loading: 'Loading...'
+      loading: 'Loading...',
+      deleteAllOrphanRaw: 'Delete All Orphan RAW',
+      deleteAllOrphanJpg: 'Delete All Orphan JPG'
     },
     
     // Export menu
@@ -389,7 +399,13 @@ export const translations = {
       files: 'files to',
       selectFolder: 'Select folder to',
       selectFolderToCopy: 'copy files to',
-      selectFolderToMove: 'move files to'
+      selectFolderToMove: 'move files to',
+      noOrphanRawFiles: 'No orphan RAW files.',
+      noOrphanJpgFiles: 'No orphan JPG files.',
+      orphanDeleteSuccess: 'Successfully moved to trash',
+      orphanDeleteConfirm: 'Confirm Delete Orphan Files',
+      orphanRawCount: ' orphan RAW files',
+      orphanJpgCount: ' orphan JPG files'
     }
   }
 };
