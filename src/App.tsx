@@ -621,7 +621,7 @@ const App: React.FC = () => {
             <button
               onClick={handleImportFiles}
               disabled={isLoading}
-              className={`px-3 xl:px-4 py-2 text-[11px] font-bold flex items-center gap-2 transition-colors disabled:opacity-50 border-r ${theme === 'dark' ? 'text-zinc-400 hover:bg-zinc-900 border-zinc-800/50' : 'text-gray-600 hover:bg-gray-100 border-gray-300/50'}`}
+              className={`h-9 px-3 xl:px-4 text-[11px] font-bold flex items-center gap-2 transition-colors disabled:opacity-50 border-r ${theme === 'dark' ? 'text-zinc-400 hover:bg-zinc-900 border-zinc-800/50' : 'text-gray-600 hover:bg-gray-100 border-gray-300/50'}`}
               title={isLoading ? t.buttons.loading : t.buttons.importFiles}
             >
               <i className={`fa-solid fa-file-circle-plus ${isLoading ? 'animate-pulse' : ''}`}></i>
@@ -630,7 +630,7 @@ const App: React.FC = () => {
             <button
               onClick={handleImportFolder}
               disabled={isLoading}
-              className={`px-3 xl:px-4 py-2 text-[11px] font-bold flex items-center gap-2 transition-colors disabled:opacity-50 ${theme === 'dark' ? 'text-zinc-400 hover:bg-zinc-900' : 'text-gray-600 hover:bg-gray-100'}`}
+              className={`h-9 px-3 xl:px-4 text-[11px] font-bold flex items-center gap-2 transition-colors disabled:opacity-50 ${theme === 'dark' ? 'text-zinc-400 hover:bg-zinc-900' : 'text-gray-600 hover:bg-gray-100'}`}
               title={isLoading ? t.buttons.loading : t.buttons.importFolder}
             >
               <i className={`fa-solid fa-folder-open ${isLoading ? 'animate-pulse' : ''}`}></i>
@@ -641,7 +641,7 @@ const App: React.FC = () => {
           <button
              onClick={() => setShowDeleteConfirm(true)}
              disabled={stats.rejected === 0}
-             className={`px-3 xl:px-4 py-2 border rounded-lg text-[11px] font-bold transition-all disabled:opacity-30 disabled:pointer-events-none ${theme === 'dark' ? 'bg-rose-500/10 hover:bg-rose-500 text-rose-500 hover:text-white border-rose-500/30' : 'bg-rose-50 hover:bg-rose-500 text-rose-600 hover:text-white border-rose-300'}`}
+             className={`h-9 px-3 xl:px-4 border rounded-lg text-[11px] font-bold transition-all disabled:opacity-30 disabled:pointer-events-none ${theme === 'dark' ? 'bg-rose-500/10 hover:bg-rose-500 text-rose-500 hover:text-white border-rose-500/30' : 'bg-rose-50 hover:bg-rose-500 text-rose-600 hover:text-white border-rose-300'}`}
              title={language === 'zh' ? `确认删除 ${stats.rejected} 项` : `Confirm ${stats.rejected} Rejects`}
           >
             <i className="fa-solid fa-trash-can xl:mr-2"></i>
@@ -654,7 +654,7 @@ const App: React.FC = () => {
             <button
               onClick={() => handleOrphanDeleteStart('RAW')}
               disabled={stats.orphanRaw === 0}
-              className={`px-2 xl:px-3 py-2 text-[10px] font-bold flex items-center gap-1.5 transition-colors disabled:opacity-30 disabled:pointer-events-none border-r ${theme === 'dark' ? 'text-amber-400 hover:bg-amber-500/10 border-zinc-800/50' : 'text-amber-600 hover:bg-amber-50 border-gray-300/50'}`}
+              className={`h-9 px-2 xl:px-3 text-[11px] font-bold flex items-center gap-1.5 transition-colors disabled:opacity-30 disabled:pointer-events-none border-r ${theme === 'dark' ? 'text-amber-400 hover:bg-amber-500/10 border-zinc-800/50' : 'text-amber-600 hover:bg-amber-50 border-gray-300/50'}`}
               title={language === 'zh' ? `删RAW (${stats.orphanRaw})` : `Del RAW (${stats.orphanRaw})`}
             >
               <i className="fa-solid fa-file-image"></i>
@@ -664,7 +664,7 @@ const App: React.FC = () => {
             <button
               onClick={() => handleOrphanDeleteStart('JPG')}
               disabled={stats.orphanJpg === 0}
-              className={`px-2 xl:px-3 py-2 text-[10px] font-bold flex items-center gap-1.5 transition-colors disabled:opacity-30 disabled:pointer-events-none ${theme === 'dark' ? 'text-amber-400 hover:bg-amber-500/10' : 'text-amber-600 hover:bg-amber-50'}`}
+              className={`h-9 px-2 xl:px-3 text-[11px] font-bold flex items-center gap-1.5 transition-colors disabled:opacity-30 disabled:pointer-events-none ${theme === 'dark' ? 'text-amber-400 hover:bg-amber-500/10' : 'text-amber-600 hover:bg-amber-50'}`}
               title={language === 'zh' ? `删JPG (${stats.orphanJpg})` : `Del JPG (${stats.orphanJpg})`}
             >
               <i className="fa-solid fa-image"></i>
@@ -683,7 +683,7 @@ const App: React.FC = () => {
                 setShowExportMenu(!showExportMenu);
               }}
               disabled={stats.picked === 0}
-              className={`px-3 xl:px-5 py-2 rounded-lg text-[11px] font-bold shadow-lg flex items-center gap-2 transition-all disabled:opacity-30 disabled:pointer-events-none ${theme === 'dark' ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-600/20' : 'bg-indigo-500 hover:bg-indigo-600 text-white shadow-indigo-500/30'}`}
+              className={`h-9 px-3 xl:px-5 rounded-lg text-[11px] font-bold shadow-lg flex items-center gap-2 transition-all disabled:opacity-30 disabled:pointer-events-none ${theme === 'dark' ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-600/20' : 'bg-indigo-500 hover:bg-indigo-600 text-white shadow-indigo-500/30'}`}
               title={t.buttons.exportPicks}
             >
               <i className="fa-solid fa-paper-plane"></i>
@@ -711,21 +711,21 @@ const App: React.FC = () => {
             <div className={`flex items-center gap-1 ml-2 border-l pl-3 ${theme === 'dark' ? 'border-zinc-800' : 'border-gray-300'}`}>
               <button
                 onClick={handleMinimize}
-                className={`w-8 h-8 flex items-center justify-center rounded transition-colors ${theme === 'dark' ? 'hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200' : 'hover:bg-gray-200 text-gray-500 hover:text-gray-700'}`}
+                className={`w-9 h-9 flex items-center justify-center rounded transition-colors ${theme === 'dark' ? 'hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200' : 'hover:bg-gray-200 text-gray-500 hover:text-gray-700'}`}
                 title={t.window.minimize}
               >
                 <i className="fa-solid fa-window-minimize text-[10px]"></i>
               </button>
               <button
                 onClick={handleMaximize}
-                className={`w-8 h-8 flex items-center justify-center rounded transition-colors ${theme === 'dark' ? 'hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200' : 'hover:bg-gray-200 text-gray-500 hover:text-gray-700'}`}
+                className={`w-9 h-9 flex items-center justify-center rounded transition-colors ${theme === 'dark' ? 'hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200' : 'hover:bg-gray-200 text-gray-500 hover:text-gray-700'}`}
                 title={t.window.maximize}
               >
                 <i className="fa-regular fa-window-maximize text-xs"></i>
               </button>
               <button
                 onClick={handleClose}
-                className={`w-8 h-8 flex items-center justify-center rounded hover:bg-red-600 transition-colors hover:text-white ${theme === 'dark' ? 'text-zinc-400' : 'text-gray-500'}`}
+                className={`w-9 h-9 flex items-center justify-center rounded hover:bg-red-600 transition-colors hover:text-white ${theme === 'dark' ? 'text-zinc-400' : 'text-gray-500'}`}
                 title={t.window.close}
               >
                 <i className="fa-solid fa-xmark text-sm"></i>
