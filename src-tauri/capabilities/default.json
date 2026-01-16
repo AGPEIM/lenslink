@@ -8,6 +8,7 @@
     "opener:default",
     "dialog:default",
     "fs:default",
+    "os:default",
     "core:path:default",
     "core:event:default",
     "core:webview:allow-set-webview-zoom",
@@ -18,6 +19,9 @@
     "core:window:allow-unmaximize",
     "core:window:allow-close",
     "core:window:allow-is-maximized",
+    "core:window:allow-show",
+    "core:window:allow-set-focus",
+    "core:window:allow-set-decorations",
     "window-state:default"
   ]
 }

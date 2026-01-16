@@ -538,14 +538,25 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_os::init())
         .invoke_handler(tauri::generate_handler![greet, read_exif, scan_folder, scan_files, move_to_trash, export_files, show_main_window])
         .setup(|app| {
-            // Ensure window decorations are disabled at runtime
             #[cfg(desktop)]
             {
                 use tauri::Manager;
                 let window = app.get_webview_window("main").unwrap();
-                window.set_decorations(false).unwrap();
+
+                // On macOS, enable native decorations for traffic light buttons
+                // On Windows/Linux, disable decorations for custom title bar
+                #[cfg(target_os = "macos")]
+                {
+                    window.set_decorations(true).unwrap();
+                }
+
+                #[cfg(not(target_os = "macos"))]
+                {
+                    window.set_decorations(false).unwrap();
+                }
                 // Window will be shown after frontend is ready via show_main_window command
             }
             Ok(())
