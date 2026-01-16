@@ -4,6 +4,7 @@ import ReactDOM from 'react-dom/client';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import './index.css';
 import App from './App';
+import { ShortcutsProvider } from './contexts/ShortcutsContext';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -13,6 +14,8 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <App />
+    <ShortcutsProvider>
+      <App />
+    </ShortcutsProvider>
   </React.StrictMode>
 );

@@ -4,6 +4,7 @@ import { PhotoGroup, SelectionState } from '../types';
 import { formatSize } from '../utils/fileHelpers';
 import { decodeRawFile, getImageFromCache } from '../utils/rawLoader';
 import { getTranslations, Language } from '../i18n';
+import { useShortcuts } from '../contexts/ShortcutsContext';
 
 interface ViewerProps {
   group: PhotoGroup;
@@ -15,6 +16,7 @@ interface ViewerProps {
 
 const Viewer: React.FC<ViewerProps> = ({ group, animationClass, onUpdateSelection, theme, language = 'zh' }) => {
   const t = getTranslations(language);
+  const { getKeyByAction } = useShortcuts();
   const [zoom, setZoom] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -344,11 +346,11 @@ const Viewer: React.FC<ViewerProps> = ({ group, animationClass, onUpdateSelectio
               className={`group relative flex items-center justify-between px-4 py-3 rounded-lg border transition-all ${
                 group.selection === SelectionState.PICKED
                   ? 'bg-emerald-500 border-emerald-400 text-white shadow-lg shadow-emerald-500/30'
-                  : (theme === 'dark' 
+                  : (theme === 'dark'
                       ? 'bg-zinc-800/40 border-zinc-700/50 text-zinc-300 hover:bg-emerald-500/10 hover:border-emerald-500/50'
                       : 'bg-gray-100/60 border-gray-300/50 text-gray-700 hover:bg-emerald-50 hover:border-emerald-300')
               }`}
-              title={t.viewer.rating.pressPToPick}
+              title={`${t.viewer.rating.pressPToPick.replace('P', getKeyByAction('mark_picked')?.displayKey || 'P')}`}
             >
               <span className="flex items-center gap-3">
                 <i className="fa-solid fa-flag text-base"></i>
@@ -358,21 +360,21 @@ const Viewer: React.FC<ViewerProps> = ({ group, animationClass, onUpdateSelectio
                 group.selection === SelectionState.PICKED
                   ? 'bg-emerald-600 border-emerald-500 text-white'
                   : (theme === 'dark' ? 'bg-zinc-900/50 border-zinc-700/50 group-hover:bg-zinc-900' : 'bg-white border-gray-300 group-hover:bg-gray-50')
-              }`}>P</kbd>
+              }`}>{getKeyByAction('mark_picked')?.displayKey || 'P'}</kbd>
             </button>
 
             <button
               onClick={() => onUpdateSelection?.(SelectionState.UNMARKED)}
               className={`group relative flex items-center justify-between px-4 py-3 rounded-lg border transition-all ${
                 group.selection === SelectionState.UNMARKED
-                  ? (theme === 'dark' 
+                  ? (theme === 'dark'
                       ? 'bg-zinc-700 border-zinc-600 text-white shadow-lg'
                       : 'bg-gray-200 border-gray-400 text-gray-900 shadow-md')
                   : (theme === 'dark'
                       ? 'bg-zinc-800/40 border-zinc-700/50 text-zinc-300 hover:bg-zinc-700/20 hover:border-zinc-600/50'
                       : 'bg-gray-100/60 border-gray-300/50 text-gray-700 hover:bg-gray-200/60 hover:border-gray-400/50')
               }`}
-              title={t.viewer.rating.pressUToUnmark}
+              title={`${t.viewer.rating.pressUToUnmark.replace('U', getKeyByAction('mark_unmarked')?.displayKey || 'U')}`}
             >
               <span className="flex items-center gap-3">
                 <i className="fa-solid fa-circle-dot text-base"></i>
@@ -382,7 +384,7 @@ const Viewer: React.FC<ViewerProps> = ({ group, animationClass, onUpdateSelectio
                 group.selection === SelectionState.UNMARKED
                   ? (theme === 'dark' ? 'bg-zinc-800 border-zinc-700 text-zinc-300' : 'bg-gray-300 border-gray-400 text-gray-800')
                   : (theme === 'dark' ? 'bg-zinc-900/50 border-zinc-700/50 group-hover:bg-zinc-900' : 'bg-white border-gray-300 group-hover:bg-gray-50')
-              }`}>U</kbd>
+              }`}>{getKeyByAction('mark_unmarked')?.displayKey || 'U'}</kbd>
             </button>
 
             <button
@@ -394,7 +396,7 @@ const Viewer: React.FC<ViewerProps> = ({ group, animationClass, onUpdateSelectio
                       ? 'bg-zinc-800/40 border-zinc-700/50 text-zinc-300 hover:bg-rose-500/10 hover:border-rose-500/50'
                       : 'bg-gray-100/60 border-gray-300/50 text-gray-700 hover:bg-rose-50 hover:border-rose-300')
               }`}
-              title={t.viewer.rating.pressXToReject}
+              title={`${t.viewer.rating.pressXToReject.replace('X', getKeyByAction('mark_rejected')?.displayKey || 'X')}`}
             >
               <span className="flex items-center gap-3">
                 <i className="fa-solid fa-trash-can text-base"></i>
@@ -404,7 +406,7 @@ const Viewer: React.FC<ViewerProps> = ({ group, animationClass, onUpdateSelectio
                 group.selection === SelectionState.REJECTED
                   ? 'bg-rose-600 border-rose-500 text-white'
                   : (theme === 'dark' ? 'bg-zinc-900/50 border-zinc-700/50 group-hover:bg-zinc-900' : 'bg-white border-gray-300 group-hover:bg-gray-50')
-              }`}>X</kbd>
+              }`}>{getKeyByAction('mark_rejected')?.displayKey || 'X'}</kbd>
             </button>
           </div>
         </section>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { getTranslations, Language } from '../i18n';
 import { ThemeMode, ResolvedTheme } from '../hooks/useTheme';
+import ShortcutSettings from './ShortcutSettings';
 
 interface SettingsPanelProps {
   isOpen: boolean;
@@ -34,9 +35,9 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
       />
 
       {/* Settings Panel */}
-      <div className={`fixed top-16 right-6 w-96 border rounded-xl shadow-2xl z-50 overflow-hidden ${theme === 'dark' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-gray-200'}`}>
+      <div className={`fixed top-16 right-6 w-96 max-h-[calc(100vh-5rem)] flex flex-col border rounded-xl shadow-2xl z-50 overflow-hidden ${theme === 'dark' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-gray-200'}`}>
         {/* Header */}
-        <div className={`px-6 py-4 border-b flex items-center justify-between ${theme === 'dark' ? 'border-zinc-800' : 'border-gray-200'}`}>
+        <div className={`px-6 py-4 border-b flex items-center justify-between shrink-0 ${theme === 'dark' ? 'border-zinc-800' : 'border-gray-200'}`}>
           <h3 className={`text-lg font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{t.settings.title}</h3>
           <button
             onClick={onClose}
@@ -47,7 +48,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-6">
+        <div className="p-6 space-y-6 overflow-y-auto">
           {/* Theme Setting */}
           <div>
             <label className={`block text-sm font-bold mb-3 ${theme === 'dark' ? 'text-zinc-400' : 'text-gray-600'}`}>
@@ -129,6 +130,11 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 {t.settings.english}
               </button>
             </div>
+          </div>
+
+          {/* Keyboard Shortcuts Setting */}
+          <div className={`pt-6 border-t ${theme === 'dark' ? 'border-zinc-800' : 'border-gray-200'}`}>
+            <ShortcutSettings theme={theme} language={language} />
           </div>
         </div>
       </div>
