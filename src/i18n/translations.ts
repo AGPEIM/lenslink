@@ -86,8 +86,9 @@ export const translations = {
     settings: {
       title: '设置',
       theme: '主题',
-      lightMode: '浅色模式',
-      darkMode: '深色模式',
+      lightMode: '浅色',
+      darkMode: '深色',
+      systemMode: '系统',
       language: '语言',
       chinese: '中文',
       english: 'English',
@@ -309,8 +310,9 @@ export const translations = {
     settings: {
       title: 'Settings',
       theme: 'Theme',
-      lightMode: 'Light Mode',
-      darkMode: 'Dark Mode',
+      lightMode: 'Light',
+      darkMode: 'Dark',
+      systemMode: 'System',
       language: 'Language',
       chinese: '中文',
       english: 'English',

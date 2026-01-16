@@ -1,12 +1,14 @@
 import React from 'react';
 import { getTranslations, Language } from '../i18n';
+import { ThemeMode, ResolvedTheme } from '../hooks/useTheme';
 
 interface SettingsPanelProps {
   isOpen: boolean;
   onClose: () => void;
-  theme: 'light' | 'dark';
+  theme: ResolvedTheme;
+  themeMode: ThemeMode;
   language: Language;
-  onThemeChange: (theme: 'light' | 'dark') => void;
+  onThemeModeChange: (mode: ThemeMode) => void;
   onLanguageChange: (language: Language) => void;
 }
 
@@ -14,8 +16,9 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
   isOpen,
   onClose,
   theme,
+  themeMode,
   language,
-  onThemeChange,
+  onThemeModeChange,
   onLanguageChange,
 }) => {
   if (!isOpen) return null;
@@ -25,11 +28,11 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
   return (
     <>
       {/* Backdrop */}
-      <div 
+      <div
         className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
         onClick={onClose}
       />
-      
+
       {/* Settings Panel */}
       <div className={`fixed top-16 right-6 w-96 border rounded-xl shadow-2xl z-50 overflow-hidden ${theme === 'dark' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-gray-200'}`}>
         {/* Header */}
@@ -53,26 +56,43 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
             </label>
             <div className="flex gap-2">
               <button
-                onClick={() => onThemeChange('light')}
-                className={`flex-1 px-4 py-3 rounded-lg text-sm font-bold transition-all ${
-                  theme === 'light'
+                onClick={() => onThemeModeChange('light')}
+                className={`flex-1 px-3 py-3 rounded-lg text-sm font-bold transition-all ${
+                  themeMode === 'light'
                     ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-800'
+                    : theme === 'dark'
+                      ? 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-800'
                 }`}
               >
-                <i className="fa-solid fa-sun mr-2"></i>
+                <i className="fa-solid fa-sun mr-1.5"></i>
                 {t.settings.lightMode}
               </button>
               <button
-                onClick={() => onThemeChange('dark')}
-                className={`flex-1 px-4 py-3 rounded-lg text-sm font-bold transition-all ${
-                  theme === 'dark'
+                onClick={() => onThemeModeChange('dark')}
+                className={`flex-1 px-3 py-3 rounded-lg text-sm font-bold transition-all ${
+                  themeMode === 'dark'
                     ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-800'
+                    : theme === 'dark'
+                      ? 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-800'
                 }`}
               >
-                <i className="fa-solid fa-moon mr-2"></i>
+                <i className="fa-solid fa-moon mr-1.5"></i>
                 {t.settings.darkMode}
+              </button>
+              <button
+                onClick={() => onThemeModeChange('system')}
+                className={`flex-1 px-3 py-3 rounded-lg text-sm font-bold transition-all ${
+                  themeMode === 'system'
+                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20'
+                    : theme === 'dark'
+                      ? 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-800'
+                }`}
+              >
+                <i className="fa-solid fa-circle-half-stroke mr-1.5"></i>
+                {t.settings.systemMode}
               </button>
             </div>
           </div>
@@ -89,7 +109,9 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 className={`flex-1 px-4 py-3 rounded-lg text-sm font-bold transition-all ${
                   language === 'zh'
                     ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-800'
+                    : theme === 'dark'
+                      ? 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-800'
                 }`}
               >
                 {t.settings.chinese}
@@ -99,7 +121,9 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 className={`flex-1 px-4 py-3 rounded-lg text-sm font-bold transition-all ${
                   language === 'en'
                     ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-800'
+                    : theme === 'dark'
+                      ? 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-800'
                 }`}
               >
                 {t.settings.english}

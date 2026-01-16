@@ -10,6 +10,7 @@ import { convertFileSrc } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { getTranslations, Language } from './i18n';
 import { usePlatform } from './hooks/usePlatform';
+import { useTheme } from './hooks/useTheme';
 import logoImg from './assets/logo.png';
 
 const App: React.FC = () => {
@@ -37,10 +38,7 @@ const App: React.FC = () => {
 
   // Settings
   const [showSettings, setShowSettings] = useState(false);
-  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    const saved = localStorage.getItem('lenslink-theme');
-    return (saved === 'light' || saved === 'dark') ? saved : 'dark';
-  });
+  const { theme, themeMode, setThemeMode } = useTheme();
   const [language, setLanguage] = useState<Language>(() => {
     const saved = localStorage.getItem('lenslink-language');
     return (saved === 'zh' || saved === 'en') ? saved : 'zh';
@@ -70,11 +68,7 @@ const App: React.FC = () => {
     appWindow.close();
   };
 
-  // Persist theme and language settings
-  useEffect(() => {
-    localStorage.setItem('lenslink-theme', theme);
-  }, [theme]);
-
+  // Persist language setting
   useEffect(() => {
     localStorage.setItem('lenslink-language', language);
   }, [language]);
@@ -875,8 +869,9 @@ const App: React.FC = () => {
         isOpen={showSettings}
         onClose={() => setShowSettings(false)}
         theme={theme}
+        themeMode={themeMode}
         language={language}
-        onThemeChange={setTheme}
+        onThemeModeChange={setThemeMode}
         onLanguageChange={setLanguage}
       />
     </div>
