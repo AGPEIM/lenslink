@@ -11,6 +11,7 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 import { getTranslations, Language } from './i18n';
 import { usePlatform } from './hooks/usePlatform';
 import { useTheme } from './hooks/useTheme';
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import logoImg from './assets/logo.png';
 
 const App: React.FC = () => {
@@ -542,23 +543,11 @@ const App: React.FC = () => {
 
 
   // Shortcut handling
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (selectedIndex === null) return;
-      if (['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName || '')) return;
-
-      switch(e.key.toLowerCase()) {
-        case 'arrowright': navigate('next'); break;
-        case 'arrowleft': navigate('prev'); break;
-        case 'p': updateSelection(SelectionState.PICKED); break;
-        case 'x': updateSelection(SelectionState.REJECTED); break;
-        case 'u': updateSelection(SelectionState.UNMARKED); break;
-        case ' ': e.preventDefault(); /* Preview handled by being in the viewer */ break;
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedIndex, navigate, updateSelection]);
+  useKeyboardShortcuts({
+    enabled: selectedIndex !== null,
+    onNavigate: navigate,
+    onUpdateSelection: updateSelection,
+  });
 
   // Scroll filmstrip to active index
   useEffect(() => {

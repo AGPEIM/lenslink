@@ -92,7 +92,22 @@ export const translations = {
       language: '语言',
       chinese: '中文',
       english: 'English',
-      close: '关闭'
+      close: '关闭',
+      shortcuts: {
+        title: '快捷键',
+        resetToDefault: '恢复默认',
+        conflictWarning: '此按键已被其他操作使用，是否覆盖？',
+        override: '覆盖',
+        cancel: '取消',
+        hint: '点击按键框后按下新按键即可修改',
+        actions: {
+          navigateNext: '下一张',
+          navigatePrev: '上一张',
+          markPicked: '标记精选',
+          markRejected: '标记删除',
+          markUnmarked: '取消标记'
+        }
+      }
     },
     
     // 查看器组件
@@ -316,7 +331,22 @@ export const translations = {
       language: 'Language',
       chinese: '中文',
       english: 'English',
-      close: 'Close'
+      close: 'Close',
+      shortcuts: {
+        title: 'Keyboard Shortcuts',
+        resetToDefault: 'Reset to Default',
+        conflictWarning: 'This key is already used by another action. Override?',
+        override: 'Override',
+        cancel: 'Cancel',
+        hint: 'Click on a key box and press a new key to change',
+        actions: {
+          navigateNext: 'Next Photo',
+          navigatePrev: 'Previous Photo',
+          markPicked: 'Mark as Picked',
+          markRejected: 'Mark as Rejected',
+          markUnmarked: 'Unmark'
+        }
+      }
     },
     
     // Viewer component
