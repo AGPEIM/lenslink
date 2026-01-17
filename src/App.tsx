@@ -28,6 +28,8 @@ const App: React.FC = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showExportConfirm, setShowExportConfirm] = useState(false);
   const [showOrphanDeleteConfirm, setShowOrphanDeleteConfirm] = useState(false);
+  const [showForceDeleteConfirm, setShowForceDeleteConfirm] = useState(false);
+  const [groupsToForceDelete, setGroupsToForceDelete] = useState<PhotoGroup[]>([]);
   const [orphanDeleteType, setOrphanDeleteType] = useState<'RAW' | 'JPG' | null>(null);
   const [exportMode, setExportMode] = useState<ExportMode>('BOTH');
   const [showExportMenu, setShowExportMenu] = useState(false);
@@ -364,8 +366,13 @@ const App: React.FC = () => {
       console.log(`Successfully moved ${movedFiles.length} files to trash`);
     } catch (error) {
       console.error('Failed to move files to trash:', error);
-      alert(`${t.messages.deleteFailed}: ${error}`);
+      // alert(`${t.messages.deleteFailed}: ${error}`);
       setShowDeleteConfirm(false);
+
+      // Show force delete confirmation
+      const rejectedGroups = photos.filter(p => p.selection === SelectionState.REJECTED);
+      setGroupsToForceDelete(rejectedGroups);
+      setShowForceDeleteConfirm(true);
     }
   };
 
@@ -454,8 +461,66 @@ const App: React.FC = () => {
       console.log(`Successfully moved ${movedFiles.length} orphan files to trash`);
     } catch (error) {
       console.error('Failed to move orphan files to trash:', error);
-      alert(`${t.messages.deleteFailed}: ${error}`);
+      // alert(`${t.messages.deleteFailed}: ${error}`);
       setShowOrphanDeleteConfirm(false);
+      
+      // Show force delete confirmation
+      if (orphanDeleteType) {
+        const orphanGroups = photos.filter(p => {
+          if (orphanDeleteType === 'RAW') {
+            return p.status === GroupStatus.RAW_ONLY;
+          } else {
+            return p.status === GroupStatus.JPG_ONLY;
+          }
+        });
+        setGroupsToForceDelete(orphanGroups);
+        setShowForceDeleteConfirm(true);
+      } else {
+        setOrphanDeleteType(null);
+      }
+    }
+  };
+
+  const executeForceDelete = async () => {
+    try {
+      // Convert groups to Rust format
+      const groupsToDelete = groupsToForceDelete.map(group => ({
+        id: group.id,
+        jpg: group.jpg ? {
+          name: group.jpg.name,
+          extension: group.jpg.extension,
+          path: group.jpg.path,
+          size: group.jpg.size
+        } : null,
+        raw: group.raw ? {
+          name: group.raw.name,
+          extension: group.raw.extension,
+          path: group.raw.path,
+          size: group.raw.size
+        } : null,
+        status: group.status,
+        exif: group.exif || null
+      }));
+
+      // Call Rust command to delete files permanently
+      const deletedFiles = await invoke<string[]>('delete_files_permanently', { groups: groupsToDelete });
+
+      // Remove from state
+      setPhotos(prev => prev.filter(p => !groupsToForceDelete.find(g => g.id === p.id)));
+      
+      // Reset state
+      setShowForceDeleteConfirm(false);
+      setGroupsToForceDelete([]);
+      setOrphanDeleteType(null); // Reset orphan type if it was set
+      
+      setSelectedIndex(photos.length > groupsToForceDelete.length ? 0 : null);
+      
+      console.log(`Successfully deleted ${deletedFiles.length} files permanently`);
+    } catch (error) {
+      console.error('Failed to force delete files:', error);
+      alert(`${t.messages.deleteFailed}: ${error}`);
+      setShowForceDeleteConfirm(false);
+      setGroupsToForceDelete([]);
       setOrphanDeleteType(null);
     }
   };
@@ -835,6 +900,22 @@ const App: React.FC = () => {
           onConfirm={executeOrphanDelete}
           onCancel={() => {
             setShowOrphanDeleteConfirm(false);
+            setOrphanDeleteType(null);
+          }}
+          theme={theme}
+          language={language}
+        />
+      )}
+
+      {/* Force Delete Confirmation Modal */}
+      {showForceDeleteConfirm && (
+        <ConfirmationModal 
+          type="forceDelete"
+          groups={groupsToForceDelete}
+          onConfirm={executeForceDelete}
+          onCancel={() => {
+            setShowForceDeleteConfirm(false);
+            setGroupsToForceDelete([]);
             setOrphanDeleteType(null);
           }}
           theme={theme}

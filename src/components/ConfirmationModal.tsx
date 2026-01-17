@@ -7,7 +7,7 @@ interface ConfirmationModalProps {
   groups: PhotoGroup[];
   onConfirm: (operation?: ExportOperation) => void;
   onCancel: () => void;
-  type: 'delete' | 'export';
+  type: 'delete' | 'export' | 'forceDelete';
   theme: 'light' | 'dark';
   language?: Language;
 }
@@ -16,17 +16,49 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ groups, onConfirm
   const t = getTranslations(language);
   const [operation, setOperation] = useState<ExportOperation>('COPY');
   
+  const getTitle = () => {
+    switch (type) {
+      case 'delete': return t.confirmationModal.delete.title;
+      case 'export': return t.confirmationModal.export.title;
+      case 'forceDelete': return t.confirmationModal.forceDelete.title;
+    }
+  };
+
+  const getIcon = () => {
+    switch (type) {
+      case 'delete': return 'fa-trash-can text-rose-500';
+      case 'export': return 'fa-download text-emerald-500';
+      case 'forceDelete': return 'fa-triangle-exclamation text-rose-500';
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center backdrop-blur-sm p-4">
       <div className={`border rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[80vh] ${theme === 'dark' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-gray-200'}`}>
         <div className={`p-6 border-b ${theme === 'dark' ? 'border-zinc-800' : 'border-gray-200'}`}>
           <h2 className={`text-xl font-bold flex items-center gap-3 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-            <i className={`fa-solid ${type === 'delete' ? 'fa-triangle-exclamation text-rose-500' : 'fa-download text-emerald-500'}`}></i>
-            {type === 'delete' ? t.confirmationModal.delete.title : t.confirmationModal.export.title}
+            <i className={`fa-solid ${getIcon()}`}></i>
+            {getTitle()}
           </h2>
-          <p className={`text-sm mt-1 ${theme === 'dark' ? 'text-zinc-500' : 'text-gray-600'}`}>
-            {type === 'delete' ? t.confirmationModal.delete.youAreAboutToMoveToTrash : t.confirmationModal.export.youAreAboutToExport} {groups.length} {type === 'delete' ? t.confirmationModal.delete.description : t.confirmationModal.export.description}{groups.reduce((acc, g) => acc + (g.jpg ? 1 : 0) + (g.raw ? 1 : 0), 0)} {type === 'delete' ? t.confirmationModal.delete.individualFiles : t.confirmationModal.export.individualFiles}{type === 'delete' ? '' : ''}
-          </p>
+          <div className={`text-sm mt-1 space-y-2 ${theme === 'dark' ? 'text-zinc-400' : 'text-gray-600'}`}>
+            {type === 'delete' && (
+              <p>
+                {t.confirmationModal.delete.youAreAboutToMoveToTrash} {groups.length} {t.confirmationModal.delete.description}{groups.reduce((acc, g) => acc + (g.jpg ? 1 : 0) + (g.raw ? 1 : 0), 0)} {t.confirmationModal.delete.individualFiles}
+              </p>
+            )}
+            {type === 'export' && (
+              <p>
+                {t.confirmationModal.export.youAreAboutToExport} {groups.length} {t.confirmationModal.export.description}{groups.reduce((acc, g) => acc + (g.jpg ? 1 : 0) + (g.raw ? 1 : 0), 0)} {t.confirmationModal.export.individualFiles}
+              </p>
+            )}
+            {type === 'forceDelete' && (
+              <div className="space-y-2">
+                <p className="font-semibold text-rose-500">{t.confirmationModal.forceDelete.description}</p>
+                <p>{t.confirmationModal.forceDelete.question}</p>
+                <p className="text-xs italic bg-rose-500/10 p-2 rounded border border-rose-500/20">{t.confirmationModal.forceDelete.warning}</p>
+              </div>
+            )}
+          </div>
           
           {type === 'export' && (
             <div className="mt-4 space-y-2">
@@ -80,6 +112,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ groups, onConfirm
         <div className={`p-6 border-t flex gap-3 justify-end ${theme === 'dark' ? 'border-zinc-800' : 'border-gray-200'}`}>
           <button 
             onClick={onCancel}
+            autoFocus
             className={`px-6 py-2 rounded-xl transition-colors text-sm font-bold ${theme === 'dark' ? 'text-zinc-400 hover:text-white hover:bg-zinc-800' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
           >
             {t.confirmationModal.buttons.cancel}
@@ -87,10 +120,18 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ groups, onConfirm
           <button 
             onClick={() => onConfirm(type === 'export' ? operation : undefined)}
             className={`px-8 py-2 rounded-xl text-white shadow-xl transition-all text-sm font-bold ${
-              type === 'delete' ? 'bg-rose-600 hover:bg-rose-500' : 'bg-emerald-600 hover:bg-emerald-500'
+              type === 'export' ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-rose-600 hover:bg-rose-500'
             }`}
           >
-            {type === 'export' ? `${operation === 'COPY' ? t.confirmationModal.export.copy : t.confirmationModal.export.move} ${language === 'zh' ? '文件' : 'Files'}` : t.confirmationModal.delete.confirmLabel}
+            {(() => {
+              if (type === 'export') {
+                return `${operation === 'COPY' ? t.confirmationModal.export.copy : t.confirmationModal.export.move} ${language === 'zh' ? '文件' : 'Files'}`;
+              }
+              if (type === 'forceDelete') {
+                return t.confirmationModal.forceDelete.confirmLabel;
+              }
+              return t.confirmationModal.delete.confirmLabel;
+            })()}
           </button>
         </div>
       </div>

@@ -183,11 +183,21 @@ export const translations = {
     confirmationModal: {
       // 删除确认
       delete: {
-        title: '移至回收站',
-        confirmLabel: '移至回收站',
+        title: '移动到回收站',
+        confirmLabel: '移动到回收站',
+        youAreAboutToMoveToTrash: '您即将把',
         description: '个照片组（',
-        individualFiles: '个独立文件）。文件将被移至回收站，可以还原。',
-        youAreAboutToMoveToTrash: '您即将移至回收站'
+        individualFiles: '个独立文件）移动到回收站。',
+        warning: '这些文件将被移动到系统回收站，可以从中恢复。',
+      },
+      // 强制删除确认
+      forceDelete: {
+        title: '永久删除确认',
+        confirmLabel: '直接删除',
+        cancelLabel: '取消',
+        description: '无法将文件移动到回收站。',
+        question: '是否要直接永久删除这些文件？此操作不可恢复！',
+        warning: '警告：此操作将永久删除文件，无法找回！'
       },
       
       // 导出确认
@@ -426,7 +436,18 @@ export const translations = {
         confirmLabel: 'Move to Trash',
         description: ' photo groups (',
         individualFiles: ' individual files). Files will be moved to the recycle bin and can be restored.',
-        youAreAboutToMoveToTrash: 'You are about to move to trash'
+        youAreAboutToMoveToTrash: 'You are about to move to trash',
+        warning: 'These files will be moved to the system trash and can be recovered.',
+      },
+      
+      // Force delete confirmation
+      forceDelete: {
+        title: 'Permanent Delete Confirmation',
+        confirmLabel: 'Direct Delete',
+        cancelLabel: 'Cancel',
+        description: 'Failed to move files to trash.',
+        question: 'Do you want to permanently delete these files? This action cannot be undone!',
+        warning: 'WARNING: This will permanently delete files and cannot be recovered!'
       },
       
       // Export confirmation

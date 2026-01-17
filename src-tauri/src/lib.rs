@@ -406,6 +406,53 @@ fn move_to_trash(groups: Vec<PhotoGroupInfo>) -> Result<Vec<String>, String> {
 }
 
 #[tauri::command]
+fn delete_files_permanently(groups: Vec<PhotoGroupInfo>) -> Result<Vec<String>, String> {
+    let mut deleted_files = Vec::new();
+    let mut failed_files = Vec::new();
+    
+    for group in groups {
+        // Delete JPG file if it exists
+        if let Some(jpg) = &group.jpg {
+            let path = Path::new(&jpg.path);
+            if path.exists() {
+                match fs::remove_file(path) {
+                    Ok(_) => {
+                        deleted_files.push(jpg.path.clone());
+                    }
+                    Err(e) => {
+                        failed_files.push(format!("Failed to delete {}: {}", jpg.path, e));
+                    }
+                }
+            }
+        }
+        
+        // Delete RAW file if it exists
+        if let Some(raw) = &group.raw {
+            let path = Path::new(&raw.path);
+            if path.exists() {
+                match fs::remove_file(path) {
+                    Ok(_) => {
+                        deleted_files.push(raw.path.clone());
+                    }
+                    Err(e) => {
+                        failed_files.push(format!("Failed to delete {}: {}", raw.path, e));
+                    }
+                }
+            }
+        }
+    }
+    
+    if !failed_files.is_empty() {
+        Err(format!(
+            "Some files failed to delete permanently:\n{}",
+            failed_files.join("\n")
+        ))
+    } else {
+        Ok(deleted_files)
+    }
+}
+
+#[tauri::command]
 fn export_files(
     groups: Vec<PhotoGroupInfo>,
     export_mode: String,
@@ -539,7 +586,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_os::init())
-        .invoke_handler(tauri::generate_handler![greet, read_exif, scan_folder, scan_files, move_to_trash, export_files, show_main_window])
+        .invoke_handler(tauri::generate_handler![greet, read_exif, scan_folder, scan_files, move_to_trash, delete_files_permanently, export_files, show_main_window])
         .setup(|app| {
             #[cfg(desktop)]
             {
