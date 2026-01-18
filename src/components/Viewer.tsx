@@ -317,15 +317,15 @@ const Viewer: React.FC<ViewerProps> = ({ group, animationClass, onUpdateSelectio
         <section className="space-y-4">
           <div className="space-y-1">
             <p className={`text-[10px] uppercase font-bold tracking-wider ${theme === 'dark' ? 'text-zinc-500' : 'text-gray-500'}`}>{t.viewer.exif.device}</p>
-            <p className={`text-sm ${theme === 'dark' ? 'text-zinc-200' : 'text-gray-700'}`}>{group.exif?.model}</p>
+            <p className={`text-sm ${theme === 'dark' ? 'text-zinc-200' : 'text-gray-700'}`}>{group.exif?.model || '--'}</p>
           </div>
           <div className="space-y-1">
             <p className={`text-[10px] uppercase font-bold tracking-wider ${theme === 'dark' ? 'text-zinc-500' : 'text-gray-500'}`}>{t.viewer.exif.optics}</p>
-            <p className={`text-sm ${theme === 'dark' ? 'text-zinc-200' : 'text-gray-700'}`}>{group.exif?.lens}</p>
+            <p className={`text-sm ${theme === 'dark' ? 'text-zinc-200' : 'text-gray-700'}`}>{group.exif?.lens || '--'}</p>
           </div>
           <div className="space-y-1">
              <p className={`text-[10px] uppercase font-bold tracking-wider ${theme === 'dark' ? 'text-zinc-500' : 'text-gray-500'}`}>{t.viewer.exif.timestamp}</p>
-             <p className={`text-sm ${theme === 'dark' ? 'text-zinc-200' : 'text-gray-700'}`}>{group.exif?.dateTime}</p>
+             <p className={`text-sm ${theme === 'dark' ? 'text-zinc-200' : 'text-gray-700'}`}>{group.exif?.dateTime || '--'}</p>
           </div>
         </section>
 
