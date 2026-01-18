@@ -113,7 +113,7 @@ Download the latest release for your platform:
 
 #### Prerequisites
 
-- **Node.js** 18+ and npm
+- **Node.js** 18+ and pnpm
 - **Rust** 1.70+
 - **Tauri CLI**
 
@@ -125,13 +125,13 @@ git clone https://github.com/AGPEIM/lenslink.git
 cd lenslink
 
 # Install dependencies
-npm install
+pnpm install
 
 # Run in development mode
-npm run tauri dev
+pnpm run tauri dev
 
 # Build for production
-npm run tauri build
+pnpm run tauri build
 ```
 
 ---

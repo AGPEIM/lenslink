@@ -110,7 +110,7 @@
 
 #### 前置条件
 
-- **Node.js** 18+ 和 npm
+- **Node.js** 18+ 和 pnpm
 - **Rust** 1.70+
 - **Tauri CLI**
 
@@ -122,13 +122,13 @@ git clone https://github.com/AGPEIM/lenslink.git
 cd lenslink
 
 # 安装依赖
-npm install
+pnpm install
 
 # 开发模式运行
-npm run tauri dev
+pnpm run tauri dev
 
 # 生产构建
-npm run tauri build
+pnpm run tauri build
 ```
 
 ---
