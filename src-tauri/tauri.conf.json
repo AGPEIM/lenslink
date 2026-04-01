@@ -5,7 +5,7 @@
   "identifier": "com.lenslink.app",
   "build": {
     "beforeDevCommand": "pnpm run dev",
-    "devUrl": "http://localhost:5173",
+    "devUrl": "http://127.0.0.1:3000",
     "beforeBuildCommand": "pnpm run build",
     "frontendDist": "../dist"
   },
