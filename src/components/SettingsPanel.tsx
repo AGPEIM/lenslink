@@ -11,6 +11,8 @@ interface SettingsPanelProps {
   language: Language;
   onThemeModeChange: (mode: ThemeMode) => void;
   onLanguageChange: (language: Language) => void;
+  enableAnimation: boolean;
+  onEnableAnimationChange: (enabled: boolean) => void;
 }
 
 const SettingsPanel: React.FC<SettingsPanelProps> = ({
@@ -21,6 +23,8 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
   language,
   onThemeModeChange,
   onLanguageChange,
+  enableAnimation,
+  onEnableAnimationChange,
 }) => {
   if (!isOpen) return null;
 
@@ -130,6 +134,43 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 {t.settings.english}
               </button>
             </div>
+          </div>
+
+          {/* Animation Setting */}
+          <div>
+            <label className={`block text-sm font-bold mb-3 ${theme === 'dark' ? 'text-zinc-400' : 'text-gray-600'}`}>
+              <i className="fa-solid fa-film mr-2"></i>
+              {t.settings.animation}
+            </label>
+            <button
+              onClick={() => onEnableAnimationChange(!enableAnimation)}
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-lg border transition-all ${
+                enableAnimation
+                  ? (theme === 'dark'
+                      ? 'bg-emerald-900/20 border-emerald-700/30'
+                      : 'bg-emerald-50 border-emerald-200')
+                  : (theme === 'dark'
+                      ? 'bg-zinc-800/40 border-zinc-700/50'
+                      : 'bg-gray-100/60 border-gray-300/50')
+              }`}
+            >
+              <span className={`text-sm font-semibold ${
+                enableAnimation
+                  ? (theme === 'dark' ? 'text-emerald-300' : 'text-emerald-700')
+                  : (theme === 'dark' ? 'text-zinc-400' : 'text-gray-600')
+              }`}>
+                {t.settings.animationDescription}
+              </span>
+              <div className={`w-12 h-7 rounded-full p-1 transition-colors ${
+                enableAnimation
+                  ? 'bg-indigo-600'
+                  : (theme === 'dark' ? 'bg-zinc-700' : 'bg-gray-300')
+              }`}>
+                <div className={`w-5 h-5 rounded-full bg-white transition-transform shadow ${
+                  enableAnimation ? 'translate-x-5' : 'translate-x-0'
+                }`}></div>
+              </div>
+            </button>
           </div>
 
           {/* Keyboard Shortcuts Setting */}

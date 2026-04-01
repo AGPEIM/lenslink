@@ -6,7 +6,7 @@ type FilterType = 'ALL' | 'PICKED' | 'REJECTED' | 'UNMARKED' | 'ORPHANS';
 /**
  * Custom hook for managing photo navigation and filtering
  */
-export function usePhotoNavigation(photos: PhotoGroup[]) {
+export function usePhotoNavigation(photos: PhotoGroup[], enableAnimation: boolean = true) {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [filter, setFilterInternal] = useState<FilterType>('ALL');
   const [animationClass, setAnimationClass] = useState('');
@@ -54,13 +54,15 @@ export function usePhotoNavigation(photos: PhotoGroup[]) {
     const nextIndex = (selectedIndex + 1) % currentFilteredLength;
     const nextPhotoId = filteredPhotos[nextIndex]?.id;
 
-    // Trigger animation
-    if (state === SelectionState.PICKED) setAnimationClass('animate-pick');
-    if (state === SelectionState.REJECTED) setAnimationClass('animate-reject');
+    // Trigger animation only if enabled
+    if (enableAnimation) {
+      if (state === SelectionState.PICKED) setAnimationClass('animate-pick');
+      if (state === SelectionState.REJECTED) setAnimationClass('animate-reject');
+    }
 
     // Small delay to allow animation before updating state and navigating
     // For UNMARKED state, no animation, so we can navigate immediately
-    const delay = state === SelectionState.UNMARKED ? 0 : 400;
+    const delay = !enableAnimation || state === SelectionState.UNMARKED ? 0 : 400;
 
     setTimeout(() => {
       // 先更新照片状态
@@ -91,7 +93,7 @@ export function usePhotoNavigation(photos: PhotoGroup[]) {
         }, 0);
       }
     }, delay);
-  }, [selectedIndex, currentPhoto, filteredPhotos, filter]);
+  }, [selectedIndex, currentPhoto, filteredPhotos, filter, enableAnimation]);
 
   // Select photo by index in filtered list
   const selectPhotoByIndex = useCallback((index: number) => {

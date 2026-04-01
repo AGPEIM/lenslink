@@ -19,17 +19,21 @@ import { useModalState } from './hooks/useModalState';
 import { usePhotoNavigation } from './hooks/usePhotoNavigation';
 
 const App: React.FC = () => {
-  // Custom hooks for state management
-  const photoState = usePhotoState();
-  const modalState = useModalState();
-  const navigation = usePhotoNavigation(photoState.photos);
-
   // Settings
   const { theme, themeMode, setThemeMode } = useTheme();
   const [language, setLanguage] = useState<Language>(() => {
     const saved = localStorage.getItem('lenslink-language');
     return (saved === 'zh' || saved === 'en') ? saved : 'zh';
   });
+  const [enableAnimation, setEnableAnimation] = useState<boolean>(() => {
+    const saved = localStorage.getItem('lenslink-enable-animation');
+    return saved === null ? true : saved === 'true';
+  });
+
+  // Custom hooks for state management
+  const photoState = usePhotoState();
+  const modalState = useModalState();
+  const navigation = usePhotoNavigation(photoState.photos, enableAnimation);
   const t = getTranslations(language);
 
   // Platform detection
@@ -59,6 +63,11 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('lenslink-language', language);
   }, [language]);
+
+  // Persist animation setting
+  useEffect(() => {
+    localStorage.setItem('lenslink-enable-animation', String(enableAnimation));
+  }, [enableAnimation]);
 
   // Auto-select first photo when photos are available
   useEffect(() => {
@@ -406,6 +415,8 @@ const App: React.FC = () => {
         language={language}
         onThemeModeChange={setThemeMode}
         onLanguageChange={setLanguage}
+        enableAnimation={enableAnimation}
+        onEnableAnimationChange={setEnableAnimation}
       />
     </div>
   );
