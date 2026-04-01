@@ -20,6 +20,7 @@ const Viewer: React.FC<ViewerProps> = ({ group, animationClass, onUpdateSelectio
   const [zoom, setZoom] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
+  const [rotation, setRotation] = useState(0);
   
   // 使用双缓冲策略消除闪烁：保持当前显示的图片直到新图片加载完成
   const [displayUrl, setDisplayUrl] = useState<string | null>(null);
@@ -103,10 +104,11 @@ const Viewer: React.FC<ViewerProps> = ({ group, animationClass, onUpdateSelectio
     }
   }, [nextUrl]);
 
-  // Reset zoom when switching photos
+  // Reset zoom and rotation when switching photos
   useEffect(() => {
     setZoom(1);
     setOffset({ x: 0, y: 0 });
+    setRotation(0);
   }, [group.id]);
 
   // Handle wheel event with passive: false to allow preventDefault
@@ -165,6 +167,24 @@ const Viewer: React.FC<ViewerProps> = ({ group, animationClass, onUpdateSelectio
     setOffset({ x: 0, y: 0 });
   };
 
+  const rotateLeft = () => {
+    setRotation((prev) => {
+      // 计算新的角度，确保沿着最短路径旋转
+      const newRotation = prev - 90;
+      // 不使用模运算，让角度可以自由增减，这样CSS过渡会选择最短路径
+      return newRotation;
+    });
+  };
+
+  const rotateRight = () => {
+    setRotation((prev) => {
+      // 计算新的角度，确保沿着最短路径旋转
+      const newRotation = prev + 90;
+      // 不使用模运算，让角度可以自由增减，这样CSS过渡会选择最短路径
+      return newRotation;
+    });
+  };
+
   return (
     <div className={`flex-1 flex flex-col md:flex-row overflow-hidden ${animationClass}`}>
       {/* Main Image Stage */}
@@ -174,86 +194,112 @@ const Viewer: React.FC<ViewerProps> = ({ group, animationClass, onUpdateSelectio
         onMouseDown={handleMouseDown}
         onDoubleClick={resetZoom}
       >
-        <div 
-          className="transition-transform duration-75 ease-out will-change-transform max-w-full max-h-full flex items-center justify-center relative"
-          style={{ 
-            transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`,
+        {/* 外层容器：负责旋转，即时响应无过渡 */}
+        <div
+          className="max-w-full max-h-full flex items-center justify-center relative"
+          style={{
+            transform: `rotate(${rotation}deg)`,
             cursor: zoom > 1 ? (isDragging ? 'grabbing' : 'grab') : 'default'
           }}
         >
-          {/* 主图片显示 - 使用 displayUrl 实现无闪烁切换 */}
-          {displayUrl ? (
-            <img 
-              src={displayUrl} 
-              alt={group.id}
-              draggable={false}
-              className={`max-w-full max-h-[calc(100vh-8rem)] w-auto h-auto object-contain shadow-[0_0_100px_rgba(0,0,0,0.5)] rounded-sm select-none transition-opacity duration-200 ${imageReady ? 'opacity-100' : 'opacity-0'}`}
-            />
-          ) : isLoadingRaw && !displayUrl ? (
-            // Loading RAW file (only show when no previous image to display)
-            <div className="flex flex-col items-center justify-center gap-6 p-12">
-              <div className="w-32 h-32 bg-indigo-600/10 rounded-full flex items-center justify-center border-4 border-indigo-600/30 animate-pulse">
-                <i className="fa-solid fa-spinner fa-spin text-6xl text-indigo-400"></i>
-              </div>
-              <div className="text-center space-y-3">
-                <h3 className="text-2xl font-bold text-zinc-200">{t.viewer.rawLoading.title}</h3>
-                <p className="text-zinc-400 max-w-md leading-relaxed">
-                  {t.viewer.rawLoading.processing} <span className="text-indigo-400 font-semibold">{group.raw?.extension}</span> {t.viewer.rawLoading.file}
-                </p>
-                <p className="text-sm text-zinc-500">{group.raw?.name}</p>
-              </div>
-            </div>
-          ) : rawError ? (
-            // Error loading RAW
-            <div className="flex flex-col items-center justify-center gap-6 p-12 bg-zinc-900/50 rounded-2xl border-2 border-dashed border-rose-700/50 shadow-2xl">
-              <div className="w-32 h-32 bg-rose-600/10 rounded-full flex items-center justify-center border-4 border-rose-600/30">
-                <i className="fa-solid fa-triangle-exclamation text-6xl text-rose-400"></i>
-              </div>
-              <div className="text-center space-y-3">
-                <h3 className="text-2xl font-bold text-zinc-200">{t.viewer.rawError.title}</h3>
-                <p className="text-zinc-400 max-w-md leading-relaxed">
-                  {t.viewer.rawError.couldNotProcess} <span className="text-rose-400 font-semibold">{group.raw?.extension}</span> {t.viewer.rawError.file}
-                </p>
-                <p className="text-sm text-zinc-500 font-mono">{rawError}</p>
-                <div className="pt-4 text-sm text-zinc-500">
-                  <p className="font-mono">{group.raw?.name}</p>
-                  <p className="text-xs mt-1">{formatSize(group.raw?.size || 0)}</p>
+          {/* 内层容器：负责缩放和平移，有过渡动画 */}
+          <div
+            className="transition-transform duration-75 ease-out will-change-transform"
+            style={{
+              transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`
+            }}
+          >
+            {/* 主图片显示 - 使用 displayUrl 实现无闪烁切换 */}
+            {displayUrl ? (
+              <img
+                src={displayUrl}
+                alt={group.id}
+                draggable={false}
+                className={`max-w-full max-h-[calc(100vh-8rem)] w-auto h-auto object-contain shadow-[0_0_100px_rgba(0,0,0,0.5)] rounded-sm select-none transition-opacity duration-200 ${imageReady ? 'opacity-100' : 'opacity-0'}`}
+              />
+            ) : isLoadingRaw && !displayUrl ? (
+              // Loading RAW file (only show when no previous image to display)
+              <div className="flex flex-col items-center justify-center gap-6 p-12">
+                <div className="w-32 h-32 bg-indigo-600/10 rounded-full flex items-center justify-center border-4 border-indigo-600/30 animate-pulse">
+                  <i className="fa-solid fa-spinner fa-spin text-6xl text-indigo-400"></i>
+                </div>
+                <div className="text-center space-y-3">
+                  <h3 className="text-2xl font-bold text-zinc-200">{t.viewer.rawLoading.title}</h3>
+                  <p className="text-zinc-400 max-w-md leading-relaxed">
+                    {t.viewer.rawLoading.processing} <span className="text-indigo-400 font-semibold">{group.raw?.extension}</span> {t.viewer.rawLoading.file}
+                  </p>
+                  <p className="text-sm text-zinc-500">{group.raw?.name}</p>
                 </div>
               </div>
-            </div>
-          ) : (
-            // Fallback placeholder
-            <div className="flex flex-col items-center justify-center gap-6 p-12 bg-zinc-900/50 rounded-2xl border-2 border-dashed border-zinc-700/50 shadow-2xl">
-              <div className="w-32 h-32 bg-indigo-600/10 rounded-full flex items-center justify-center border-4 border-indigo-600/30">
-                <i className="fa-solid fa-file-image text-6xl text-indigo-400"></i>
+            ) : rawError ? (
+              // Error loading RAW
+              <div className="flex flex-col items-center justify-center gap-6 p-12 bg-zinc-900/50 rounded-2xl border-2 border-dashed border-rose-700/50 shadow-2xl">
+                <div className="w-32 h-32 bg-rose-600/10 rounded-full flex items-center justify-center border-4 border-rose-600/30">
+                  <i className="fa-solid fa-triangle-exclamation text-6xl text-rose-400"></i>
+                </div>
+                <div className="text-center space-y-3">
+                  <h3 className="text-2xl font-bold text-zinc-200">{t.viewer.rawError.title}</h3>
+                  <p className="text-zinc-400 max-w-md leading-relaxed">
+                    {t.viewer.rawError.couldNotProcess} <span className="text-rose-400 font-semibold">{group.raw?.extension}</span> {t.viewer.rawError.file}
+                  </p>
+                  <p className="text-sm text-zinc-500 font-mono">{rawError}</p>
+                  <div className="pt-4 text-sm text-zinc-500">
+                    <p className="font-mono">{group.raw?.name}</p>
+                    <p className="text-xs mt-1">{formatSize(group.raw?.size || 0)}</p>
+                  </div>
+                </div>
               </div>
-              <div className="text-center space-y-3">
-                <h3 className="text-2xl font-bold text-zinc-200">{t.viewer.noPreview.title}</h3>
-                <p className="text-zinc-400 max-w-md leading-relaxed">
-                  {group.raw ? (
-                    <>{t.viewer.noPreview.rawWithoutPreview}<br />({group.raw.extension})</>
-                  ) : (
-                    <>{t.viewer.noPreview.noImageFound}</>
-                  )}
-                </p>
+            ) : (
+              // Fallback placeholder
+              <div className="flex flex-col items-center justify-center gap-6 p-12 bg-zinc-900/50 rounded-2xl border-2 border-dashed border-zinc-700/50 shadow-2xl">
+                <div className="w-32 h-32 bg-indigo-600/10 rounded-full flex items-center justify-center border-4 border-indigo-600/30">
+                  <i className="fa-solid fa-file-image text-6xl text-indigo-400"></i>
+                </div>
+                <div className="text-center space-y-3">
+                  <h3 className="text-2xl font-bold text-zinc-200">{t.viewer.noPreview.title}</h3>
+                  <p className="text-zinc-400 max-w-md leading-relaxed">
+                    {group.raw ? (
+                      <>{t.viewer.noPreview.rawWithoutPreview}<br />({group.raw.extension})</>
+                    ) : (
+                      <>{t.viewer.noPreview.noImageFound}</>
+                    )}
+                  </p>
+                </div>
               </div>
-            </div>
-          )}
-          
-          {/* 加载指示器覆盖层 - 当有图片显示但正在加载新图片时 */}
-          {isLoadingRaw && displayUrl && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-[1px] rounded-sm">
-              <div className="bg-black/60 px-4 py-2 rounded-full flex items-center gap-2">
-                <i className="fa-solid fa-spinner fa-spin text-indigo-400"></i>
-                <span className="text-sm text-zinc-300">{t.viewer.rawLoading.title}</span>
+            )}
+
+            {/* 加载指示器覆盖层 - 当有图片显示但正在加载新图片时 */}
+            {isLoadingRaw && displayUrl && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-[1px] rounded-sm">
+                <div className="bg-black/60 px-4 py-2 rounded-full flex items-center gap-2">
+                  <i className="fa-solid fa-spinner fa-spin text-indigo-400"></i>
+                  <span className="text-sm text-zinc-300">{t.viewer.rawLoading.title}</span>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
         
         {/* Zoom Controls Overlay */}
         <div className={`absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 backdrop-blur-md px-3 py-2 rounded-full border shadow-2xl z-20 ${theme === 'dark' ? 'bg-zinc-900/80 border-zinc-800' : 'bg-white/80 border-gray-300'}`}>
-          <button 
+          {/* Rotate Buttons */}
+          <button
+            onClick={rotateLeft}
+            className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors ${theme === 'dark' ? 'hover:bg-zinc-800 text-zinc-400' : 'hover:bg-gray-200 text-gray-600'}`}
+            title={t.viewer.rotate.left}
+          >
+            <i className="fa-solid fa-rotate-left"></i>
+          </button>
+          <button
+            onClick={rotateRight}
+            className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors ${theme === 'dark' ? 'hover:bg-zinc-800 text-zinc-400' : 'hover:bg-gray-200 text-gray-600'}`}
+            title={t.viewer.rotate.right}
+          >
+            <i className="fa-solid fa-rotate-right"></i>
+          </button>
+          <div className={`w-px h-4 mx-1 ${theme === 'dark' ? 'bg-zinc-800' : 'bg-gray-300'}`}></div>
+          {/* Zoom Buttons */}
+          <button
             onClick={() => setZoom(z => Math.max(z - 0.5, 1))}
             className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors ${theme === 'dark' ? 'hover:bg-zinc-800 text-zinc-400' : 'hover:bg-gray-200 text-gray-600'}`}
           >
@@ -262,14 +308,14 @@ const Viewer: React.FC<ViewerProps> = ({ group, animationClass, onUpdateSelectio
           <span className={`text-[10px] font-mono font-bold min-w-[40px] text-center ${theme === 'dark' ? 'text-zinc-500' : 'text-gray-500'}`}>
             {Math.round(zoom * 100)}%
           </span>
-          <button 
+          <button
             onClick={() => setZoom(z => Math.min(z + 0.5, 10))}
             className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors ${theme === 'dark' ? 'hover:bg-zinc-800 text-zinc-400' : 'hover:bg-gray-200 text-gray-600'}`}
           >
             <i className="fa-solid fa-magnifying-glass-plus"></i>
           </button>
           <div className={`w-px h-4 mx-1 ${theme === 'dark' ? 'bg-zinc-800' : 'bg-gray-300'}`}></div>
-          <button 
+          <button
             onClick={resetZoom}
             className="px-2 text-[10px] font-bold text-indigo-400 hover:text-indigo-300 transition-colors"
           >

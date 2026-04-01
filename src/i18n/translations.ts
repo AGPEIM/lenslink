@@ -118,6 +118,12 @@ export const translations = {
       zoom: {
         reset: '重置'
       },
+
+      // 旋转控制
+      rotate: {
+        left: '左旋转',
+        right: '右旋转'
+      },
       
       // 状态标签
       statusLabel: {
@@ -368,6 +374,12 @@ export const translations = {
       // Zoom controls
       zoom: {
         reset: 'RESET'
+      },
+
+      // Rotation controls
+      rotate: {
+        left: 'Rotate Left',
+        right: 'Rotate Right'
       },
       
       // Status labels
