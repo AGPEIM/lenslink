@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { PhotoGroup, SelectionState, GroupStatus } from '../types';
 
 type FilterType = 'ALL' | 'PICKED' | 'REJECTED' | 'UNMARKED' | 'ORPHANS';
@@ -8,8 +8,15 @@ type FilterType = 'ALL' | 'PICKED' | 'REJECTED' | 'UNMARKED' | 'ORPHANS';
  */
 export function usePhotoNavigation(photos: PhotoGroup[]) {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-  const [filter, setFilter] = useState<FilterType>('ALL');
+  const [filter, setFilterInternal] = useState<FilterType>('ALL');
   const [animationClass, setAnimationClass] = useState('');
+  const [lastSelectedIds, setLastSelectedIds] = useState<Record<FilterType, string | null>>({
+    ALL: null,
+    PICKED: null,
+    REJECTED: null,
+    UNMARKED: null,
+    ORPHANS: null,
+  });
 
   // Get filtered photos based on current filter
   const filteredPhotos = useMemo(() => {
@@ -58,23 +65,71 @@ export function usePhotoNavigation(photos: PhotoGroup[]) {
   const selectPhotoByIndex = useCallback((index: number) => {
     if (index >= 0 && index < filteredPhotos.length) {
       setSelectedIndex(index);
+      // 保存当前筛选条件下选中的照片ID
+      setLastSelectedIds(prev => ({
+        ...prev,
+        [filter]: filteredPhotos[index].id,
+      }));
     }
-  }, [filteredPhotos.length]);
+  }, [filteredPhotos.length, filter, filteredPhotos]);
 
   // Select photo by ID (finds it in filtered list)
   const selectPhotoById = useCallback((photoId: string) => {
     const index = filteredPhotos.findIndex(p => p.id === photoId);
     if (index !== -1) {
       setSelectedIndex(index);
+      // 保存当前筛选条件下选中的照片ID
+      setLastSelectedIds(prev => ({
+        ...prev,
+        [filter]: photoId,
+      }));
     }
   }, [filteredPhotos]);
+
+  // 设置过滤器
+  const setFilter = useCallback((newFilter: FilterType) => {
+    // 保存当前筛选条件下的选中状态
+    if (selectedIndex !== null && filteredPhotos[selectedIndex]) {
+      setLastSelectedIds(prev => ({
+        ...prev,
+        [filter]: filteredPhotos[selectedIndex].id,
+      }));
+    }
+
+    // 应用新的筛选条件
+    setFilterInternal(newFilter);
+  }, [filter, selectedIndex, filteredPhotos]);
+
+  // 当筛选条件变化时，自动恢复或选择第一张
+  useEffect(() => {
+    if (filteredPhotos.length > 0) {
+      // 尝试恢复之前在该筛选条件下选中的照片
+      const lastId = lastSelectedIds[filter];
+      if (lastId) {
+        const index = filteredPhotos.findIndex(p => p.id === lastId);
+        if (index !== -1) {
+          setSelectedIndex(index);
+          return;
+        }
+      }
+      // 如果没有找到之前选中的照片，默认选中第一张
+      setSelectedIndex(0);
+    } else {
+      setSelectedIndex(null);
+    }
+  }, [filteredPhotos, filter, lastSelectedIds]);
 
   // Auto-select first photo when filter changes or photos are imported
   const autoSelectFirst = useCallback(() => {
     if (filteredPhotos.length > 0 && selectedIndex === null) {
       setSelectedIndex(0);
+      // 保存到对应的筛选条件
+      setLastSelectedIds(prev => ({
+        ...prev,
+        [filter]: filteredPhotos[0].id,
+      }));
     }
-  }, [filteredPhotos.length, selectedIndex]);
+  }, [filteredPhotos.length, selectedIndex, filter, filteredPhotos]);
 
   return {
     selectedIndex,

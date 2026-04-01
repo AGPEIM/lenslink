@@ -60,6 +60,11 @@ const App: React.FC = () => {
     localStorage.setItem('lenslink-language', language);
   }, [language]);
 
+  // Auto-select first photo when photos are available
+  useEffect(() => {
+    navigation.autoSelectFirst();
+  }, [photoState.photos.length]);
+
   // Show window after app is ready
   useEffect(() => {
     const showWindow = async () => {
@@ -88,7 +93,7 @@ const App: React.FC = () => {
       if (firstNewGroupId) {
         navigation.selectPhotoById(firstNewGroupId);
       } else if (navigation.selectedIndex === null && photoState.photos.length > 0) {
-        navigation.setSelectedIndex(0);
+        navigation.autoSelectFirst();
       }
     } catch (error) {
       console.error('Failed to import files:', error);
@@ -102,7 +107,7 @@ const App: React.FC = () => {
       if (firstNewGroupId) {
         navigation.selectPhotoById(firstNewGroupId);
       } else if (navigation.selectedIndex === null && photoState.photos.length > 0) {
-        navigation.setSelectedIndex(0);
+        navigation.autoSelectFirst();
       }
     } catch (error) {
       console.error('Failed to import folder:', error);
