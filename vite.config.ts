@@ -12,16 +12,16 @@ export default defineConfig(async () => ({
   //
   // 1. prevent vite from obscuring rust errors
   clearScreen: false,
-  // 2. tauri expects a fixed port, fail if that port is not available
+  // 2. Allow Vite to use any available port instead of strict 5173 to avoid permission issues
   server: {
-    port: 5173,
-    strictPort: true,
-    host: host || '127.0.0.1',
+    port: 3000,  // 使用不同的端口
+    strictPort: false,  // 允许使用其他可用端口
+    host: host || '127.0.0.1',  // 绑定到回环地址，避免权限问题
     hmr: host
       ? {
           protocol: "ws",
           host,
-          port: 5174,
+          port: 3001,
         }
       : undefined,
     watch: {
