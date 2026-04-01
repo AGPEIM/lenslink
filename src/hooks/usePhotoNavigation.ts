@@ -49,17 +49,49 @@ export function usePhotoNavigation(photos: PhotoGroup[]) {
   ) => {
     if (selectedIndex === null || !currentPhoto) return;
 
+    // 保存当前要导航到的下一张照片的索引（在状态更新前计算）
+    const currentFilteredLength = filteredPhotos.length;
+    const nextIndex = (selectedIndex + 1) % currentFilteredLength;
+    const nextPhotoId = filteredPhotos[nextIndex]?.id;
+
     // Trigger animation
     if (state === SelectionState.PICKED) setAnimationClass('animate-pick');
     if (state === SelectionState.REJECTED) setAnimationClass('animate-reject');
 
     // Small delay to allow animation before updating state and navigating
+    // For UNMARKED state, no animation, so we can navigate immediately
+    const delay = state === SelectionState.UNMARKED ? 0 : 400;
+
     setTimeout(() => {
+      // 先更新照片状态
       onUpdate(currentPhoto.id, state);
       setAnimationClass('');
-      navigate('next');
-    }, 400);
-  }, [selectedIndex, currentPhoto, navigate]);
+
+      // 直接使用我们之前保存的下一张照片 ID 来导航，而不是依赖状态
+      if (nextPhotoId) {
+        // 使用 setTimeout 确保状态更新后再查找
+        setTimeout(() => {
+          // 尝试通过ID查找照片，这样无论筛选条件如何都能找到正确的位置
+          const indexInNewList = filteredPhotos.findIndex(p => p.id === nextPhotoId);
+          if (indexInNewList !== -1) {
+            setSelectedIndex(indexInNewList);
+            // 保存到对应的筛选条件
+            setLastSelectedIds(prev => ({
+              ...prev,
+              [filter]: nextPhotoId,
+            }));
+          } else {
+            // 如果找不到（可能因为筛选条件变化），就选第一张
+            if (filteredPhotos.length > 0) {
+              setSelectedIndex(0);
+            } else {
+              setSelectedIndex(null);
+            }
+          }
+        }, 0);
+      }
+    }, delay);
+  }, [selectedIndex, currentPhoto, filteredPhotos, filter]);
 
   // Select photo by index in filtered list
   const selectPhotoByIndex = useCallback((index: number) => {

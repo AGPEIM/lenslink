@@ -27,10 +27,27 @@ export const Filmstrip: React.FC<FilmstripProps> = ({
     }
   }, [selectedIndex]);
 
+  // Handle mouse wheel event for photo navigation
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault(); // Prevent default vertical scroll behavior
+    if (selectedIndex === null || filteredPhotos.length <= 1) return;
+
+    if (e.deltaY > 0) {
+      // Scroll down - go to next photo
+      const nextIndex = (selectedIndex + 1) % filteredPhotos.length;
+      onSelectPhoto(nextIndex);
+    } else {
+      // Scroll up - go to previous photo
+      const prevIndex = (selectedIndex - 1 + filteredPhotos.length) % filteredPhotos.length;
+      onSelectPhoto(prevIndex);
+    }
+  };
+
   return (
     <div
       className={`h-28 border-t flex items-center px-4 gap-2 overflow-x-auto overflow-y-hidden ${theme === 'dark' ? 'bg-zinc-900 border-zinc-800' : 'bg-gray-100 border-gray-200'}`}
       ref={filmstripRef}
+      onWheel={handleWheel}
     >
       {filteredPhotos.map((p, idx) => (
         <button
