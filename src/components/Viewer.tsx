@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { PhotoGroup, SelectionState } from '../types';
+import { PhotoGroup, SelectionState, SelectionMode } from '../types';
 import { formatSize } from '../utils/fileHelpers';
 import { decodeRawFile, getImageFromCache } from '../utils/rawLoader';
 import { getTranslations, Language } from '../i18n';
@@ -10,11 +10,13 @@ interface ViewerProps {
   group: PhotoGroup;
   animationClass: string;
   onUpdateSelection?: (state: SelectionState) => void;
+  onUpdateRating?: (rating: number) => void;
+  selectionMode: SelectionMode;
   theme: 'light' | 'dark';
   language?: Language;
 }
 
-const Viewer: React.FC<ViewerProps> = ({ group, animationClass, onUpdateSelection, theme, language = 'zh' }) => {
+const Viewer: React.FC<ViewerProps> = ({ group, animationClass, onUpdateSelection, onUpdateRating, selectionMode, theme, language = 'zh' }) => {
   const t = getTranslations(language);
   const { getKeyByAction } = useShortcuts();
   const [zoom, setZoom] = useState(1);
@@ -325,14 +327,21 @@ const Viewer: React.FC<ViewerProps> = ({ group, animationClass, onUpdateSelectio
 
         {/* Quick Selection Status Overlay */}
         <div className="absolute top-10 right-10 pointer-events-none z-20">
-           {group.selection === SelectionState.PICKED && (
+           {selectionMode === 'pick_reject' && group.selection === SelectionState.PICKED && (
              <div className="bg-emerald-500 text-white px-4 py-2 rounded-full font-bold shadow-lg flex items-center gap-2">
                <i className="fa-solid fa-check"></i> {t.viewer.statusLabel.picked}
              </div>
            )}
-           {group.selection === SelectionState.REJECTED && (
+           {selectionMode === 'pick_reject' && group.selection === SelectionState.REJECTED && (
              <div className="bg-rose-500 text-white px-4 py-2 rounded-full font-bold shadow-lg flex items-center gap-2">
                <i className="fa-solid fa-xmark"></i> {t.viewer.statusLabel.rejected}
+             </div>
+           )}
+           {selectionMode === 'rating' && group.rating > 0 && (
+             <div className="bg-amber-500 text-white px-4 py-2 rounded-full font-bold shadow-lg flex items-center gap-2">
+               {Array.from({ length: 5 }, (_, i) => (
+                 <i key={i} className={`fa-star ${i < group.rating ? 'fa-solid' : 'fa-regular'} text-sm`}></i>
+               ))}
              </div>
            )}
         </div>
@@ -385,76 +394,118 @@ const Viewer: React.FC<ViewerProps> = ({ group, animationClass, onUpdateSelectio
 
         {/* Fixed Rating Actions at bottom */}
         <section className={`border-t p-4 ${theme === 'dark' ? 'border-zinc-800 bg-zinc-900/80' : 'border-gray-200 bg-white/80'}`}>
-          <p className={`text-[10px] uppercase font-bold tracking-wider mb-2 ${theme === 'dark' ? 'text-zinc-500' : 'text-gray-500'}`}>{t.viewer.rating.title}</p>
-          <div className="flex flex-col gap-2">
-            <button
-              onClick={() => onUpdateSelection?.(SelectionState.PICKED)}
-              className={`group relative flex items-center justify-between px-4 py-3 rounded-lg border transition-all ${
-                group.selection === SelectionState.PICKED
-                  ? 'bg-emerald-500 border-emerald-400 text-white shadow-lg shadow-emerald-500/30'
-                  : (theme === 'dark'
-                      ? 'bg-zinc-800/40 border-zinc-700/50 text-zinc-300 hover:bg-emerald-500/10 hover:border-emerald-500/50'
-                      : 'bg-gray-100/60 border-gray-300/50 text-gray-700 hover:bg-emerald-50 hover:border-emerald-300')
-              }`}
-              title={`${t.viewer.rating.pressPToPick.replace('P', getKeyByAction('mark_picked')?.displayKey || 'P')}`}
-            >
-              <span className="flex items-center gap-3">
-                <i className="fa-solid fa-flag text-base"></i>
-                <span className="font-semibold text-sm">{t.viewer.rating.pick}</span>
-              </span>
-              <kbd className={`px-2 py-1 text-[10px] font-mono font-bold border rounded transition-colors ${
-                group.selection === SelectionState.PICKED
-                  ? 'bg-emerald-600 border-emerald-500 text-white'
-                  : (theme === 'dark' ? 'bg-zinc-900/50 border-zinc-700/50 group-hover:bg-zinc-900' : 'bg-white border-gray-300 group-hover:bg-gray-50')
-              }`}>{getKeyByAction('mark_picked')?.displayKey || 'P'}</kbd>
-            </button>
+          {selectionMode === 'pick_reject' ? (
+            <>
+              <p className={`text-[10px] uppercase font-bold tracking-wider mb-2 ${theme === 'dark' ? 'text-zinc-500' : 'text-gray-500'}`}>{t.viewer.rating.title}</p>
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={() => onUpdateSelection?.(SelectionState.PICKED)}
+                  className={`group relative flex items-center justify-between px-4 py-3 rounded-lg border transition-all ${
+                    group.selection === SelectionState.PICKED
+                      ? 'bg-emerald-500 border-emerald-400 text-white shadow-lg shadow-emerald-500/30'
+                      : (theme === 'dark'
+                          ? 'bg-zinc-800/40 border-zinc-700/50 text-zinc-300 hover:bg-emerald-500/10 hover:border-emerald-500/50'
+                          : 'bg-gray-100/60 border-gray-300/50 text-gray-700 hover:bg-emerald-50 hover:border-emerald-300')
+                  }`}
+                  title={`${t.viewer.rating.pressPToPick.replace('P', getKeyByAction('mark_picked')?.displayKey || 'P')}`}
+                >
+                  <span className="flex items-center gap-3">
+                    <i className="fa-solid fa-flag text-base"></i>
+                    <span className="font-semibold text-sm">{t.viewer.rating.pick}</span>
+                  </span>
+                  <kbd className={`px-2 py-1 text-[10px] font-mono font-bold border rounded transition-colors ${
+                    group.selection === SelectionState.PICKED
+                      ? 'bg-emerald-600 border-emerald-500 text-white'
+                      : (theme === 'dark' ? 'bg-zinc-900/50 border-zinc-700/50 group-hover:bg-zinc-900' : 'bg-white border-gray-300 group-hover:bg-gray-50')
+                  }`}>{getKeyByAction('mark_picked')?.displayKey || 'P'}</kbd>
+                </button>
 
-            <button
-              onClick={() => onUpdateSelection?.(SelectionState.UNMARKED)}
-              className={`group relative flex items-center justify-between px-4 py-3 rounded-lg border transition-all ${
-                group.selection === SelectionState.UNMARKED
-                  ? (theme === 'dark'
-                      ? 'bg-zinc-700 border-zinc-600 text-white shadow-lg'
-                      : 'bg-gray-200 border-gray-400 text-gray-900 shadow-md')
-                  : (theme === 'dark'
-                      ? 'bg-zinc-800/40 border-zinc-700/50 text-zinc-300 hover:bg-zinc-700/20 hover:border-zinc-600/50'
-                      : 'bg-gray-100/60 border-gray-300/50 text-gray-700 hover:bg-gray-200/60 hover:border-gray-400/50')
-              }`}
-              title={`${t.viewer.rating.pressUToUnmark.replace('U', getKeyByAction('mark_unmarked')?.displayKey || 'U')}`}
-            >
-              <span className="flex items-center gap-3">
-                <i className="fa-solid fa-circle-dot text-base"></i>
-                <span className="font-semibold text-sm">{t.viewer.rating.unmark}</span>
-              </span>
-              <kbd className={`px-2 py-1 text-[10px] font-mono font-bold border rounded transition-colors ${
-                group.selection === SelectionState.UNMARKED
-                  ? (theme === 'dark' ? 'bg-zinc-800 border-zinc-700 text-zinc-300' : 'bg-gray-300 border-gray-400 text-gray-800')
-                  : (theme === 'dark' ? 'bg-zinc-900/50 border-zinc-700/50 group-hover:bg-zinc-900' : 'bg-white border-gray-300 group-hover:bg-gray-50')
-              }`}>{getKeyByAction('mark_unmarked')?.displayKey || 'U'}</kbd>
-            </button>
+                <button
+                  onClick={() => onUpdateSelection?.(SelectionState.UNMARKED)}
+                  className={`group relative flex items-center justify-between px-4 py-3 rounded-lg border transition-all ${
+                    group.selection === SelectionState.UNMARKED
+                      ? (theme === 'dark'
+                          ? 'bg-zinc-700 border-zinc-600 text-white shadow-lg'
+                          : 'bg-gray-200 border-gray-400 text-gray-900 shadow-md')
+                      : (theme === 'dark'
+                          ? 'bg-zinc-800/40 border-zinc-700/50 text-zinc-300 hover:bg-zinc-700/20 hover:border-zinc-600/50'
+                          : 'bg-gray-100/60 border-gray-300/50 text-gray-700 hover:bg-gray-200/60 hover:border-gray-400/50')
+                  }`}
+                  title={`${t.viewer.rating.pressUToUnmark.replace('U', getKeyByAction('mark_unmarked')?.displayKey || 'U')}`}
+                >
+                  <span className="flex items-center gap-3">
+                    <i className="fa-solid fa-circle-dot text-base"></i>
+                    <span className="font-semibold text-sm">{t.viewer.rating.unmark}</span>
+                  </span>
+                  <kbd className={`px-2 py-1 text-[10px] font-mono font-bold border rounded transition-colors ${
+                    group.selection === SelectionState.UNMARKED
+                      ? (theme === 'dark' ? 'bg-zinc-800 border-zinc-700 text-zinc-300' : 'bg-gray-300 border-gray-400 text-gray-800')
+                      : (theme === 'dark' ? 'bg-zinc-900/50 border-zinc-700/50 group-hover:bg-zinc-900' : 'bg-white border-gray-300 group-hover:bg-gray-50')
+                  }`}>{getKeyByAction('mark_unmarked')?.displayKey || 'U'}</kbd>
+                </button>
 
-            <button
-              onClick={() => onUpdateSelection?.(SelectionState.REJECTED)}
-              className={`group relative flex items-center justify-between px-4 py-3 rounded-lg border transition-all ${
-                group.selection === SelectionState.REJECTED
-                  ? 'bg-rose-500 border-rose-400 text-white shadow-lg shadow-rose-500/30'
-                  : (theme === 'dark'
-                      ? 'bg-zinc-800/40 border-zinc-700/50 text-zinc-300 hover:bg-rose-500/10 hover:border-rose-500/50'
-                      : 'bg-gray-100/60 border-gray-300/50 text-gray-700 hover:bg-rose-50 hover:border-rose-300')
-              }`}
-              title={`${t.viewer.rating.pressXToReject.replace('X', getKeyByAction('mark_rejected')?.displayKey || 'X')}`}
-            >
-              <span className="flex items-center gap-3">
-                <i className="fa-solid fa-trash-can text-base"></i>
-                <span className="font-semibold text-sm">{t.viewer.rating.reject}</span>
-              </span>
-              <kbd className={`px-2 py-1 text-[10px] font-mono font-bold border rounded transition-colors ${
-                group.selection === SelectionState.REJECTED
-                  ? 'bg-rose-600 border-rose-500 text-white'
-                  : (theme === 'dark' ? 'bg-zinc-900/50 border-zinc-700/50 group-hover:bg-zinc-900' : 'bg-white border-gray-300 group-hover:bg-gray-50')
-              }`}>{getKeyByAction('mark_rejected')?.displayKey || 'X'}</kbd>
-            </button>
-          </div>
+                <button
+                  onClick={() => onUpdateSelection?.(SelectionState.REJECTED)}
+                  className={`group relative flex items-center justify-between px-4 py-3 rounded-lg border transition-all ${
+                    group.selection === SelectionState.REJECTED
+                      ? 'bg-rose-500 border-rose-400 text-white shadow-lg shadow-rose-500/30'
+                      : (theme === 'dark'
+                          ? 'bg-zinc-800/40 border-zinc-700/50 text-zinc-300 hover:bg-rose-500/10 hover:border-rose-500/50'
+                          : 'bg-gray-100/60 border-gray-300/50 text-gray-700 hover:bg-rose-50 hover:border-rose-300')
+                  }`}
+                  title={`${t.viewer.rating.pressXToReject.replace('X', getKeyByAction('mark_rejected')?.displayKey || 'X')}`}
+                >
+                  <span className="flex items-center gap-3">
+                    <i className="fa-solid fa-trash-can text-base"></i>
+                    <span className="font-semibold text-sm">{t.viewer.rating.reject}</span>
+                  </span>
+                  <kbd className={`px-2 py-1 text-[10px] font-mono font-bold border rounded transition-colors ${
+                    group.selection === SelectionState.REJECTED
+                      ? 'bg-rose-600 border-rose-500 text-white'
+                      : (theme === 'dark' ? 'bg-zinc-900/50 border-zinc-700/50 group-hover:bg-zinc-900' : 'bg-white border-gray-300 group-hover:bg-gray-50')
+                  }`}>{getKeyByAction('mark_rejected')?.displayKey || 'X'}</kbd>
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className={`text-[10px] uppercase font-bold tracking-wider mb-3 ${theme === 'dark' ? 'text-zinc-500' : 'text-gray-500'}`}>{t.viewer.starRating.title}</p>
+              {/* Star Rating */}
+              <div className="flex items-center justify-center gap-1 mb-3">
+                {/* Clear button - only show when rated */}
+                {group.rating > 0 && (
+                  <button
+                    onClick={() => onUpdateRating?.(0)}
+                    className={`w-7 h-7 flex items-center justify-center rounded-md transition-all ${theme === 'dark' ? 'text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10' : 'text-gray-400 hover:text-rose-500 hover:bg-rose-50'}`}
+                    title={t.viewer.starRating.pressToClear.replace('{key}', getKeyByAction('clear_rating')?.displayKey || '0')}
+                  >
+                    <i className="fa-solid fa-xmark text-sm"></i>
+                  </button>
+                )}
+                {[1, 2, 3, 4, 5].map(star => (
+                  <button
+                    key={star}
+                    onClick={() => onUpdateRating?.(star === group.rating ? 0 : star)}
+                    className={`w-10 h-10 flex items-center justify-center rounded-lg transition-all ${
+                      star <= group.rating
+                        ? 'text-amber-400 hover:text-amber-300'
+                        : (theme === 'dark' ? 'text-zinc-700 hover:text-zinc-500' : 'text-gray-300 hover:text-gray-400')
+                    }`}
+                    title={t.viewer.starRating.pressToRate.replace('{key}', getKeyByAction(`rate_${star}` as any)?.displayKey || String(star)).replace('{n}', String(star))}
+                  >
+                    <i className={`fa-star ${star <= group.rating ? 'fa-solid text-2xl' : 'fa-regular text-xl'}`}></i>
+                  </button>
+                ))}
+              </div>
+              {/* Rating display text */}
+              <div className={`text-center mt-2 text-xs ${theme === 'dark' ? 'text-zinc-500' : 'text-gray-500'}`}>
+                {group.rating > 0
+                  ? t.viewer.starRating.stars.replace('{n}', String(group.rating))
+                  : t.viewer.starRating.noRating
+                }
+              </div>
+            </>
+          )}
         </section>
       </div>
     </div>

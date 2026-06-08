@@ -1,4 +1,5 @@
 import React from 'react';
+import { SelectionMode } from '../types';
 
 interface StatusBarProps {
   theme: 'light' | 'dark';
@@ -8,16 +9,28 @@ interface StatusBarProps {
     picked: number;
     rejected: number;
     orphans: number;
+    rated: number;
+    unrated: number;
   };
+  selectionMode: SelectionMode;
 }
 
-export const StatusBar: React.FC<StatusBarProps> = ({ theme, t, stats }) => {
+export const StatusBar: React.FC<StatusBarProps> = ({ theme, t, stats, selectionMode }) => {
   return (
     <footer className={`h-10 border-t px-6 flex items-center justify-between text-[10px] z-20 ${theme === 'dark' ? 'bg-zinc-950 border-zinc-800 text-zinc-500' : 'bg-white border-gray-200 text-gray-500'}`}>
       <div className="flex gap-4">
         <span>{stats.total} {t.footer.total}</span>
-        <span className="text-emerald-500 font-bold">{stats.picked} {t.footer.picked}</span>
-        <span className="text-rose-500 font-bold">{stats.rejected} {t.footer.stagedForTrash}</span>
+        {selectionMode === 'pick_reject' ? (
+          <>
+            <span className="text-emerald-500 font-bold">{stats.picked} {t.footer.picked}</span>
+            <span className="text-rose-500 font-bold">{stats.rejected} {t.footer.stagedForTrash}</span>
+          </>
+        ) : (
+          <>
+            <span className="text-amber-500 font-bold">{stats.rated} {t.footer.rated}</span>
+            <span className="text-zinc-500 font-bold">{stats.unrated} {t.footer.unrated}</span>
+          </>
+        )}
         <span className="text-amber-500 font-bold">{stats.orphans} {t.footer.orphans}</span>
       </div>
     </footer>

@@ -1,22 +1,14 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import { PhotoGroup, SelectionState, GroupStatus } from '../types';
-
-type FilterType = 'ALL' | 'PICKED' | 'REJECTED' | 'UNMARKED' | 'ORPHANS';
+import { PhotoGroup, SelectionState, GroupStatus, AppFilter, SelectionMode } from '../types';
 
 /**
  * Custom hook for managing photo navigation and filtering
  */
-export function usePhotoNavigation(photos: PhotoGroup[], enableAnimation: boolean = true) {
+export function usePhotoNavigation(photos: PhotoGroup[], enableAnimation: boolean = true, selectionMode: SelectionMode = 'pick_reject') {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-  const [filter, setFilterInternal] = useState<FilterType>('ALL');
+  const [filter, setFilterInternal] = useState<AppFilter>('ALL');
   const [animationClass, setAnimationClass] = useState('');
-  const [lastSelectedIds, setLastSelectedIds] = useState<Record<FilterType, string | null>>({
-    ALL: null,
-    PICKED: null,
-    REJECTED: null,
-    UNMARKED: null,
-    ORPHANS: null,
-  });
+  const [lastSelectedIds, setLastSelectedIds] = useState<Record<string, string | null>>({});
 
   // Get filtered photos based on current filter
   const filteredPhotos = useMemo(() => {
@@ -24,6 +16,12 @@ export function usePhotoNavigation(photos: PhotoGroup[], enableAnimation: boolea
       case 'PICKED': return photos.filter(p => p.selection === SelectionState.PICKED);
       case 'REJECTED': return photos.filter(p => p.selection === SelectionState.REJECTED);
       case 'UNMARKED': return photos.filter(p => p.selection === SelectionState.UNMARKED);
+      case 'RATING_5': return photos.filter(p => p.rating === 5);
+      case 'RATING_4_PLUS': return photos.filter(p => p.rating >= 4);
+      case 'RATING_3_PLUS': return photos.filter(p => p.rating >= 3);
+      case 'RATING_2_PLUS': return photos.filter(p => p.rating >= 2);
+      case 'RATING_1_PLUS': return photos.filter(p => p.rating >= 1);
+      case 'UNRATED': return photos.filter(p => p.rating === 0);
       case 'ORPHANS': return photos.filter(p => p.status !== GroupStatus.COMPLETE);
       default: return photos;
     }
@@ -35,12 +33,22 @@ export function usePhotoNavigation(photos: PhotoGroup[], enableAnimation: boolea
   // Navigate to next/previous photo
   const navigate = useCallback((direction: 'prev' | 'next') => {
     if (selectedIndex === null || filteredPhotos.length === 0) return;
+    let newIndex: number;
     if (direction === 'next') {
-      setSelectedIndex((selectedIndex + 1) % filteredPhotos.length);
+      newIndex = (selectedIndex + 1) % filteredPhotos.length;
     } else {
-      setSelectedIndex((selectedIndex - 1 + filteredPhotos.length) % filteredPhotos.length);
+      newIndex = (selectedIndex - 1 + filteredPhotos.length) % filteredPhotos.length;
     }
-  }, [selectedIndex, filteredPhotos.length]);
+    setSelectedIndex(newIndex);
+    // 同步更新 lastSelectedIds，避免后续 useEffect 恢复旧位置
+    const newPhotoId = filteredPhotos[newIndex]?.id;
+    if (newPhotoId) {
+      setLastSelectedIds(prev => ({
+        ...prev,
+        [filter]: newPhotoId,
+      }));
+    }
+  }, [selectedIndex, filteredPhotos, filter]);
 
   // Update selection with animation
   const updateSelectionWithAnimation = useCallback((
@@ -121,7 +129,7 @@ export function usePhotoNavigation(photos: PhotoGroup[], enableAnimation: boolea
   }, [filteredPhotos]);
 
   // 设置过滤器
-  const setFilter = useCallback((newFilter: FilterType) => {
+  const setFilter = useCallback((newFilter: AppFilter) => {
     // 保存当前筛选条件下的选中状态
     if (selectedIndex !== null && filteredPhotos[selectedIndex]) {
       setLastSelectedIds(prev => ({
@@ -178,5 +186,6 @@ export function usePhotoNavigation(photos: PhotoGroup[], enableAnimation: boolea
     selectPhotoByIndex,
     selectPhotoById,
     autoSelectFirst,
+    selectionMode,
   };
 }

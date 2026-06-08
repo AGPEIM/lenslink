@@ -1,9 +1,10 @@
 import React from 'react';
+import { AppFilter } from '../types';
 
 interface EmptyStateProps {
   theme: 'light' | 'dark';
   t: any;
-  filter: 'ALL' | 'PICKED' | 'REJECTED' | 'UNMARKED' | 'ORPHANS';
+  filter: AppFilter;
   hasPhotos: boolean;
   onImportFolder: () => void;
 }
@@ -47,12 +48,16 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         {filter === 'REJECTED' && t.emptyState.rejected.title}
         {filter === 'UNMARKED' && t.emptyState.unmarked.title}
         {filter === 'ORPHANS' && t.emptyState.orphans.title}
+        {(filter === 'RATING_5' || filter === 'RATING_4_PLUS' || filter === 'RATING_3_PLUS' || filter === 'RATING_2_PLUS' || filter === 'RATING_1_PLUS') && t.emptyState.ratingFiltered.title}
+        {filter === 'UNRATED' && t.emptyState.unrated.title}
       </h2>
       <p className={`max-w-md text-lg font-medium leading-snug ${theme === 'dark' ? 'text-zinc-500' : 'text-gray-500'}`}>
         {filter === 'PICKED' && t.emptyState.picked.description}
         {filter === 'REJECTED' && t.emptyState.rejected.description}
         {filter === 'UNMARKED' && t.emptyState.unmarked.description}
         {filter === 'ORPHANS' && t.emptyState.orphans.description}
+        {(filter === 'RATING_5' || filter === 'RATING_4_PLUS' || filter === 'RATING_3_PLUS' || filter === 'RATING_2_PLUS' || filter === 'RATING_1_PLUS') && t.emptyState.ratingFiltered.description}
+        {filter === 'UNRATED' && t.emptyState.unrated.description}
       </p>
     </div>
   );

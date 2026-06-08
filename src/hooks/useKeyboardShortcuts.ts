@@ -6,12 +6,16 @@ interface UseKeyboardShortcutsOptions {
   enabled: boolean;
   onNavigate: (direction: 'prev' | 'next') => void;
   onUpdateSelection: (state: SelectionState) => void;
+  onUpdateRating: (rating: number) => void;
+  selectionMode: 'pick_reject' | 'rating';
 }
 
 export function useKeyboardShortcuts({
   enabled,
   onNavigate,
   onUpdateSelection,
+  onUpdateRating,
+  selectionMode,
 }: UseKeyboardShortcutsOptions) {
   const { getActionByKey } = useShortcuts();
 
@@ -44,17 +48,53 @@ export function useKeyboardShortcuts({
           onNavigate('prev');
           break;
         case 'mark_picked':
-          onUpdateSelection(SelectionState.PICKED);
+          if (selectionMode === 'pick_reject') {
+            onUpdateSelection(SelectionState.PICKED);
+          }
           break;
         case 'mark_rejected':
-          onUpdateSelection(SelectionState.REJECTED);
+          if (selectionMode === 'pick_reject') {
+            onUpdateSelection(SelectionState.REJECTED);
+          }
           break;
         case 'mark_unmarked':
-          onUpdateSelection(SelectionState.UNMARKED);
+          if (selectionMode === 'pick_reject') {
+            onUpdateSelection(SelectionState.UNMARKED);
+          }
+          break;
+        case 'rate_1':
+          if (selectionMode === 'rating') {
+            onUpdateRating(1);
+          }
+          break;
+        case 'rate_2':
+          if (selectionMode === 'rating') {
+            onUpdateRating(2);
+          }
+          break;
+        case 'rate_3':
+          if (selectionMode === 'rating') {
+            onUpdateRating(3);
+          }
+          break;
+        case 'rate_4':
+          if (selectionMode === 'rating') {
+            onUpdateRating(4);
+          }
+          break;
+        case 'rate_5':
+          if (selectionMode === 'rating') {
+            onUpdateRating(5);
+          }
+          break;
+        case 'clear_rating':
+          if (selectionMode === 'rating') {
+            onUpdateRating(0);
+          }
           break;
       }
     },
-    [enabled, getActionByKey, onNavigate, onUpdateSelection]
+    [enabled, getActionByKey, onNavigate, onUpdateSelection, onUpdateRating, selectionMode]
   );
 
   useEffect(() => {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { SelectionState, GroupStatus, ExportOperation } from './types';
+import { SelectionState, GroupStatus, ExportOperation, SelectionMode } from './types';
 import Viewer from './components/Viewer';
 import { Toolbar } from './components/Toolbar';
 import { Filmstrip } from './components/Filmstrip';
@@ -29,11 +29,15 @@ const App: React.FC = () => {
     const saved = localStorage.getItem('lenslink-enable-animation');
     return saved === null ? true : saved === 'true';
   });
+  const [selectionMode, setSelectionMode] = useState<SelectionMode>(() => {
+    const saved = localStorage.getItem('lenslink-selection-mode');
+    return (saved === 'rating') ? 'rating' : 'pick_reject';
+  });
 
   // Custom hooks for state management
   const photoState = usePhotoState();
   const modalState = useModalState();
-  const navigation = usePhotoNavigation(photoState.photos, enableAnimation);
+  const navigation = usePhotoNavigation(photoState.photos, enableAnimation, selectionMode);
   const t = getTranslations(language);
 
   // Platform detection
@@ -68,6 +72,16 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('lenslink-enable-animation', String(enableAnimation));
   }, [enableAnimation]);
+
+  // Persist selection mode setting
+  useEffect(() => {
+    localStorage.setItem('lenslink-selection-mode', selectionMode);
+  }, [selectionMode]);
+
+  // Reset filter to ALL when switching selection mode
+  useEffect(() => {
+    navigation.setFilter('ALL');
+  }, [selectionMode]);
 
   // Auto-select first photo when photos are available
   useEffect(() => {
@@ -138,6 +152,21 @@ const App: React.FC = () => {
       // Show force delete confirmation
       const rejectedGroups = photoState.photos.filter(p => p.selection === SelectionState.REJECTED);
       modalState.setGroupsToForceDelete(rejectedGroups);
+      modalState.setShowForceDeleteConfirm(true);
+    }
+  };
+
+  const handleDeleteFiltered = async () => {
+    try {
+      const targetGroups = navigation.filteredPhotos;
+      const deletedCount = await photoState.deleteFilteredPhotos(targetGroups);
+      modalState.setShowDeleteConfirm(false);
+      navigation.setSelectedIndex(photoState.photos.length > deletedCount ? 0 : null);
+      console.log(`Successfully moved ${deletedCount} filtered files to trash`);
+    } catch (error) {
+      console.error('Failed to move filtered files to trash:', error);
+      modalState.setShowDeleteConfirm(false);
+      modalState.setGroupsToForceDelete(navigation.filteredPhotos);
       modalState.setShowForceDeleteConfirm(true);
     }
   };
@@ -221,7 +250,10 @@ const App: React.FC = () => {
 
   // Export handlers
   const handleExportStart = (mode: 'JPG' | 'RAW' | 'BOTH') => {
-    if (photoState.stats.picked === 0) {
+    const hasTarget = selectionMode === 'rating'
+      ? (navigation.filteredPhotos.length > 0 && navigation.filter !== 'ALL')
+      : photoState.stats.picked > 0;
+    if (!hasTarget) {
       alert(t.messages.noPhotosToExport);
       return;
     }
@@ -247,17 +279,27 @@ const App: React.FC = () => {
         return;
       }
 
-      if (photoState.stats.picked === 0) {
+      const hasTarget = selectionMode === 'rating'
+        ? (navigation.filteredPhotos.length > 0 && navigation.filter !== 'ALL')
+        : photoState.stats.picked > 0;
+      if (!hasTarget) {
         alert(t.messages.noPhotosToExport);
         modalState.setShowExportConfirm(false);
         return;
       }
 
-      const exportedCount = await photoState.exportPickedPhotos(
-        modalState.exportMode,
-        operation,
-        destinationFolder
-      );
+      const exportedCount = selectionMode === 'rating'
+        ? await photoState.exportFilteredPhotos(
+            navigation.filteredPhotos,
+            modalState.exportMode,
+            operation,
+            destinationFolder
+          )
+        : await photoState.exportPickedPhotos(
+            modalState.exportMode,
+            operation,
+            destinationFolder
+          );
 
       if (operation === 'MOVE') {
         navigation.setSelectedIndex(photoState.photos.length > exportedCount ? 0 : null);
@@ -281,6 +323,16 @@ const App: React.FC = () => {
     onUpdateSelection: (state: SelectionState) => {
       navigation.updateSelectionWithAnimation(state, photoState.updatePhotoSelection);
     },
+    onUpdateRating: (rating: number) => {
+      if (navigation.currentPhoto) {
+        photoState.updatePhotoRating(navigation.currentPhoto.id, rating);
+        // 评分后自动跳转下一张（仅打星时，清除评分不跳）
+        if (rating > 0) {
+          navigation.navigate('next');
+        }
+      }
+    },
+    selectionMode,
   });
 
   return (
@@ -292,11 +344,13 @@ const App: React.FC = () => {
         t={t}
         filter={navigation.filter}
         onFilterChange={navigation.setFilter}
+        selectionMode={selectionMode}
         isLoading={photoState.isLoading}
         onImportFiles={handleImportFiles}
         onImportFolder={handleImportFolder}
         stats={photoState.stats}
         onDeleteRejected={() => modalState.setShowDeleteConfirm(true)}
+        filteredCount={navigation.filteredPhotos.length}
         onDeleteOrphanRaw={() => handleOrphanDeleteStart('RAW')}
         onDeleteOrphanJpg={() => handleOrphanDeleteStart('JPG')}
         showExportMenu={modalState.showExportMenu}
@@ -329,6 +383,16 @@ const App: React.FC = () => {
                 onUpdateSelection={(state: SelectionState) => {
                   navigation.updateSelectionWithAnimation(state, photoState.updatePhotoSelection);
                 }}
+                onUpdateRating={(rating: number) => {
+                  if (navigation.currentPhoto) {
+                    photoState.updatePhotoRating(navigation.currentPhoto.id, rating);
+                    // 评分后自动跳转下一张
+                    if (rating > 0) {
+                      navigation.navigate('next');
+                    }
+                  }
+                }}
+                selectionMode={selectionMode}
                 theme={theme}
                 language={language}
               />
@@ -340,6 +404,7 @@ const App: React.FC = () => {
               filteredPhotos={navigation.filteredPhotos}
               selectedIndex={navigation.selectedIndex}
               onSelectPhoto={navigation.selectPhotoByIndex}
+              selectionMode={selectionMode}
             />
           </>
         )}
@@ -349,8 +414,10 @@ const App: React.FC = () => {
       {modalState.showDeleteConfirm && (
         <ConfirmationModal
           type="delete"
-          groups={photoState.photos.filter(p => p.selection === SelectionState.REJECTED)}
-          onConfirm={handleDeleteRejected}
+          groups={selectionMode === 'rating'
+            ? navigation.filteredPhotos
+            : photoState.photos.filter(p => p.selection === SelectionState.REJECTED)}
+          onConfirm={selectionMode === 'rating' ? handleDeleteFiltered : handleDeleteRejected}
           onCancel={() => modalState.setShowDeleteConfirm(false)}
           theme={theme}
           language={language}
@@ -360,7 +427,9 @@ const App: React.FC = () => {
       {modalState.showExportConfirm && (
         <ConfirmationModal
           type="export"
-          groups={photoState.photos.filter(p => p.selection === SelectionState.PICKED)}
+          groups={selectionMode === 'rating'
+            ? navigation.filteredPhotos
+            : photoState.photos.filter(p => p.selection === SelectionState.PICKED)}
           onConfirm={handleExport}
           onCancel={() => modalState.setShowExportConfirm(false)}
           theme={theme}
@@ -404,7 +473,7 @@ const App: React.FC = () => {
       )}
 
       {/* Footer Info */}
-      <StatusBar theme={theme} t={t} stats={photoState.stats} />
+      <StatusBar theme={theme} t={t} stats={photoState.stats} selectionMode={selectionMode} />
 
       {/* Settings Panel */}
       <SettingsPanel
@@ -417,6 +486,8 @@ const App: React.FC = () => {
         onLanguageChange={setLanguage}
         enableAnimation={enableAnimation}
         onEnableAnimationChange={setEnableAnimation}
+        selectionMode={selectionMode}
+        onSelectionModeChange={setSelectionMode}
       />
     </div>
   );

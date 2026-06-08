@@ -1,6 +1,7 @@
 import React from 'react';
 import { getTranslations, Language } from '../i18n';
 import { ThemeMode, ResolvedTheme } from '../hooks/useTheme';
+import { SelectionMode } from '../types';
 import ShortcutSettings from './ShortcutSettings';
 
 interface SettingsPanelProps {
@@ -13,6 +14,8 @@ interface SettingsPanelProps {
   onLanguageChange: (language: Language) => void;
   enableAnimation: boolean;
   onEnableAnimationChange: (enabled: boolean) => void;
+  selectionMode: SelectionMode;
+  onSelectionModeChange: (mode: SelectionMode) => void;
 }
 
 const SettingsPanel: React.FC<SettingsPanelProps> = ({
@@ -25,6 +28,8 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
   onLanguageChange,
   enableAnimation,
   onEnableAnimationChange,
+  selectionMode,
+  onSelectionModeChange,
 }) => {
   if (!isOpen) return null;
 
@@ -132,6 +137,52 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 }`}
               >
                 {t.settings.english}
+              </button>
+            </div>
+          </div>
+
+          {/* Selection Mode Setting */}
+          <div>
+            <label className={`block text-sm font-bold mb-3 ${theme === 'dark' ? 'text-zinc-400' : 'text-gray-600'}`}>
+              <i className="fa-solid fa-tags mr-2"></i>
+              {t.settings.selectionMode}
+            </label>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => onSelectionModeChange('pick_reject')}
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg border transition-all ${
+                  selectionMode === 'pick_reject'
+                    ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-600/20'
+                    : (theme === 'dark'
+                        ? 'bg-zinc-800/40 border-zinc-700/50 text-zinc-300 hover:bg-zinc-700/20 hover:border-zinc-600/50'
+                        : 'bg-gray-100/60 border-gray-300/50 text-gray-700 hover:bg-gray-200/60 hover:border-gray-400/50')
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <i className="fa-solid fa-flag text-base"></i>
+                  <div className="text-left">
+                    <div className="font-semibold text-sm">{t.settings.pickRejectMode}</div>
+                    <div className={`text-[10px] ${selectionMode === 'pick_reject' ? 'text-indigo-200' : (theme === 'dark' ? 'text-zinc-500' : 'text-gray-500')}`}>{t.settings.pickRejectModeDesc}</div>
+                  </div>
+                </div>
+              </button>
+              <button
+                onClick={() => onSelectionModeChange('rating')}
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg border transition-all ${
+                  selectionMode === 'rating'
+                    ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-600/20'
+                    : (theme === 'dark'
+                        ? 'bg-zinc-800/40 border-zinc-700/50 text-zinc-300 hover:bg-zinc-700/20 hover:border-zinc-600/50'
+                        : 'bg-gray-100/60 border-gray-300/50 text-gray-700 hover:bg-gray-200/60 hover:border-gray-400/50')
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <i className="fa-solid fa-star text-base"></i>
+                  <div className="text-left">
+                    <div className="font-semibold text-sm">{t.settings.ratingMode}</div>
+                    <div className={`text-[10px] ${selectionMode === 'rating' ? 'text-indigo-200' : (theme === 'dark' ? 'text-zinc-500' : 'text-gray-500')}`}>{t.settings.ratingModeDesc}</div>
+                  </div>
+                </div>
               </button>
             </div>
           </div>

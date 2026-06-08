@@ -9,7 +9,11 @@ export const translations = {
       picked: '精选',
       rejected: '待删除',
       unmarked: '未标记',
-      orphans: '单独文件'
+      orphans: '单独文件',
+      rating5: '★ 5',
+      rating4Plus: '★ 4+',
+      rating3Plus: '★ 3+',
+      unrated: '未评分'
     },
     
     // 导航栏 - 按钮
@@ -38,7 +42,9 @@ export const translations = {
       unmarked: '未标记',
       complete: '完整',
       jpgOnly: '仅 JPG',
-      rawOnly: '仅 RAW'
+      rawOnly: '仅 RAW',
+      unrated: '未评分',
+      rated: '已评分'
     },
     
     // 窗口控制
@@ -70,6 +76,14 @@ export const translations = {
       orphans: {
         title: '暂无单独文件',
         description: '所有照片都已完整配对。没有找到单独的 RAW 或 JPG 文件。'
+      },
+      ratingFiltered: {
+        title: '暂无对应评分照片',
+        description: '还没有照片达到此评分标准。'
+      },
+      unrated: {
+        title: '所有照片已评分',
+        description: '所有照片都已被评分。'
       }
     },
     
@@ -79,7 +93,9 @@ export const translations = {
       picked: '已精选',
       stagedForTrash: '待删除',
       orphans: '单独文件',
-      aiInsightPlaceholder: '点击侧边栏的魔杖图标进行会话分析。'
+      aiInsightPlaceholder: '点击侧边栏的魔杖图标进行会话分析。',
+      rated: '已评分',
+      unrated: '未评分'
     },
     
     // 设置面板
@@ -95,6 +111,11 @@ export const translations = {
       close: '关闭',
       animation: '切换动画',
       animationDescription: '显示滑动切换动画效果',
+      selectionMode: '分类模式',
+      pickRejectMode: '精选/删除',
+      pickRejectModeDesc: '使用 P/X/U 快捷键快速分类',
+      ratingMode: '星级评分',
+      ratingModeDesc: '使用 1-5 数字键评分，0 清除评分',
       shortcuts: {
         title: '快捷键',
         resetToDefault: '恢复默认',
@@ -107,7 +128,13 @@ export const translations = {
           navigatePrev: '上一张',
           markPicked: '标记精选',
           markRejected: '标记删除',
-          markUnmarked: '取消标记'
+          markUnmarked: '取消标记',
+          rate1: '1星评分',
+          rate2: '2星评分',
+          rate3: '3星评分',
+          rate4: '4星评分',
+          rate5: '5星评分',
+          clearRating: '清除评分'
         }
       }
     },
@@ -184,6 +211,17 @@ export const translations = {
         pressPToPick: '按 P 键精选',
         pressUToUnmark: '按 U 键取消标记',
         pressXToReject: '按 X 键删除'
+      },
+
+      // 星级评分
+      starRating: {
+        title: '星级评分',
+        pressToRate: '按 {key} 键评 {n} 星',
+        pressToClear: '按 {key} 键清除评分',
+        unrated: '未评分',
+        clearRating: '清除评分',
+        noRating: '未评分',
+        stars: '{n} 星'
       }
     },
     
@@ -266,7 +304,11 @@ export const translations = {
       picked: 'PICKED',
       rejected: 'REJECTED',
       unmarked: 'UNMARKED',
-      orphans: 'ORPHANS'
+      orphans: 'ORPHANS',
+      rating5: '★ 5',
+      rating4Plus: '★ 4+',
+      rating3Plus: '★ 3+',
+      unrated: 'UNRATED'
     },
     
     // Navigation bar - Buttons
@@ -295,7 +337,9 @@ export const translations = {
       unmarked: 'UNMARKED',
       complete: 'COMPLETE',
       jpgOnly: 'JPG ONLY',
-      rawOnly: 'RAW ONLY'
+      rawOnly: 'RAW ONLY',
+      unrated: 'UNRATED',
+      rated: 'RATED'
     },
     
     // Window controls
@@ -327,6 +371,14 @@ export const translations = {
       orphans: {
         title: 'No Orphan Files',
         description: 'All photos are properly paired. No standalone RAW or JPG files found.'
+      },
+      ratingFiltered: {
+        title: 'No Matching Rated Photos',
+        description: 'No photos meet this rating threshold yet.'
+      },
+      unrated: {
+        title: 'All Photos Rated',
+        description: 'All photos have been rated.'
       }
     },
     
@@ -336,7 +388,9 @@ export const translations = {
       picked: 'PICKED',
       stagedForTrash: 'STAGED FOR TRASH',
       orphans: 'ORPHANS',
-      aiInsightPlaceholder: 'Press the wand icon in sidebar for session analysis.'
+      aiInsightPlaceholder: 'Press the wand icon in sidebar for session analysis.',
+      rated: 'RATED',
+      unrated: 'UNRATED'
     },
     
     // Settings panel
@@ -352,6 +406,11 @@ export const translations = {
       close: 'Close',
       animation: 'Transition Animation',
       animationDescription: 'Show slide animation effects',
+      selectionMode: 'Classification Mode',
+      pickRejectMode: 'Pick / Reject',
+      pickRejectModeDesc: 'Use P/X/U shortcuts for quick classification',
+      ratingMode: 'Star Rating',
+      ratingModeDesc: 'Use 1-5 number keys to rate, 0 to clear',
       shortcuts: {
         title: 'Keyboard Shortcuts',
         resetToDefault: 'Reset to Default',
@@ -364,7 +423,13 @@ export const translations = {
           navigatePrev: 'Previous Photo',
           markPicked: 'Mark as Picked',
           markRejected: 'Mark as Rejected',
-          markUnmarked: 'Unmark'
+          markUnmarked: 'Unmark',
+          rate1: 'Rate 1 Star',
+          rate2: 'Rate 2 Stars',
+          rate3: 'Rate 3 Stars',
+          rate4: 'Rate 4 Stars',
+          rate5: 'Rate 5 Stars',
+          clearRating: 'Clear Rating'
         }
       }
     },
@@ -441,6 +506,17 @@ export const translations = {
         pressPToPick: 'Press P to pick',
         pressUToUnmark: 'Press U to unmark',
         pressXToReject: 'Press X to reject'
+      },
+
+      // Star rating
+      starRating: {
+        title: 'Star Rating',
+        pressToRate: 'Press {key} to rate {n} star(s)',
+        pressToClear: 'Press {key} to clear rating',
+        unrated: 'Unrated',
+        clearRating: 'Clear',
+        noRating: 'No Rating',
+        stars: '{n} Star(s)'
       }
     },
     

@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { ExportMode } from '../types';
+import { ExportMode, AppFilter, SelectionMode } from '../types';
 import { Language } from '../i18n';
 import logoImg from '../assets/logo.png';
 
@@ -7,8 +7,9 @@ interface ToolbarProps {
   theme: 'light' | 'dark';
   language: Language;
   t: any;
-  filter: 'ALL' | 'PICKED' | 'REJECTED' | 'UNMARKED' | 'ORPHANS';
-  onFilterChange: (filter: 'ALL' | 'PICKED' | 'REJECTED' | 'UNMARKED' | 'ORPHANS') => void;
+  filter: AppFilter;
+  onFilterChange: (filter: AppFilter) => void;
+  selectionMode: SelectionMode;
   isLoading: boolean;
   onImportFiles: () => void;
   onImportFolder: () => void;
@@ -18,6 +19,7 @@ interface ToolbarProps {
     orphanRaw: number;
     orphanJpg: number;
   };
+  filteredCount: number;
   onDeleteRejected: () => void;
   onDeleteOrphanRaw: () => void;
   onDeleteOrphanJpg: () => void;
@@ -37,6 +39,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   t,
   filter,
   onFilterChange,
+  selectionMode,
   isLoading,
   onImportFiles,
   onImportFolder,
@@ -44,6 +47,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   onDeleteRejected,
   onDeleteOrphanRaw,
   onDeleteOrphanJpg,
+  filteredCount,
   showExportMenu,
   onToggleExportMenu,
   onExportStart,
@@ -86,18 +90,68 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         </div>
 
         <div className={`flex items-center gap-1 p-1 rounded-lg border ${theme === 'dark' ? 'bg-zinc-950 border-zinc-800/50' : 'bg-gray-100 border-gray-300/50'}`} data-tauri-drag-region="false" style={{WebkitAppRegion: 'no-drag'} as any}>
-          {(['ALL', 'PICKED', 'REJECTED', 'UNMARKED', 'ORPHANS'] as const).map(f => {
-            const filterKey = f.toLowerCase() as keyof typeof t.filters;
-            return (
-              <button
-                key={f}
-                onClick={() => onFilterChange(f)}
-                className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all ${filter === f ? (theme === 'dark' ? 'bg-zinc-800 text-white shadow-inner' : 'bg-white text-gray-900 shadow-md') : (theme === 'dark' ? 'text-zinc-600 hover:text-zinc-300' : 'text-gray-500 hover:text-gray-700')}`}
-              >
-                {t.filters[filterKey].toUpperCase()}
-              </button>
-            );
-          })}
+          {selectionMode === 'pick_reject' 
+            ? (['ALL', 'PICKED', 'REJECTED', 'UNMARKED', 'ORPHANS'] as const).map(f => {
+                const filterKey = f.toLowerCase() as keyof typeof t.filters;
+                return (
+                  <button
+                    key={f}
+                    onClick={() => onFilterChange(f)}
+                    className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all ${filter === f ? (theme === 'dark' ? 'bg-zinc-800 text-white shadow-inner' : 'bg-white text-gray-900 shadow-md') : (theme === 'dark' ? 'text-zinc-600 hover:text-zinc-300' : 'text-gray-500 hover:text-gray-700')}`}
+                  >
+                    {t.filters[filterKey].toUpperCase()}
+                  </button>
+                );
+              })
+            : (() => {
+                const getActiveMinRating = (): number => {
+                  if (filter === 'RATING_5') return 5;
+                  if (filter === 'RATING_4_PLUS') return 4;
+                  if (filter === 'RATING_3_PLUS') return 3;
+                  if (filter === 'RATING_2_PLUS') return 2;
+                  if (filter === 'RATING_1_PLUS') return 1;
+                  return 0;
+                };
+                const activeMin = getActiveMinRating();
+                return (
+                  <div className="flex items-center gap-0.5">
+                    <button
+                      onClick={() => onFilterChange('ALL')}
+                      className={`px-2 py-1 rounded-md text-[10px] font-bold transition-all ${filter === 'ALL' ? (theme === 'dark' ? 'bg-zinc-800 text-white shadow-inner' : 'bg-white text-gray-900 shadow-md') : (theme === 'dark' ? 'text-zinc-600 hover:text-zinc-300' : 'text-gray-500 hover:text-gray-700')}`}
+                    >
+                      {t.filters.all}
+                    </button>
+                    <div className={`flex items-center mx-1 px-1.5 py-0.5 rounded-md ${theme === 'dark' ? 'bg-zinc-800/50' : 'bg-gray-200/50'}`}>
+                      {[1, 2, 3, 4, 5].map(star => {
+                        const filterForStar = (star === 5 ? 'RATING_5' : `RATING_${star}_PLUS`) as AppFilter;
+                        const isActive = star <= activeMin;
+                        return (
+                          <button
+                            key={star}
+                            onClick={() => onFilterChange(filter === filterForStar ? 'ALL' : filterForStar)}
+                            className={`w-6 h-6 flex items-center justify-center rounded transition-all ${filter === filterForStar ? (theme === 'dark' ? 'bg-zinc-800 shadow-inner' : 'bg-white shadow-md') : (theme === 'dark' ? 'hover:bg-zinc-800' : 'hover:bg-white')}`}
+                          >
+                            <i className={`fa-star ${isActive ? 'fa-solid text-amber-400' : `fa-regular ${theme === 'dark' ? 'text-zinc-500' : 'text-gray-400'}`} text-xs`}></i>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <button
+                      onClick={() => onFilterChange('UNRATED')}
+                      className={`px-2 py-1 rounded-md text-[10px] font-bold transition-all ${filter === 'UNRATED' ? (theme === 'dark' ? 'bg-zinc-800 text-white shadow-inner' : 'bg-white text-gray-900 shadow-md') : (theme === 'dark' ? 'text-zinc-600 hover:text-zinc-300' : 'text-gray-500 hover:text-gray-700')}`}
+                    >
+                      {t.filters.unrated}
+                    </button>
+                    <button
+                      onClick={() => onFilterChange('ORPHANS')}
+                      className={`px-2 py-1 rounded-md text-[10px] font-bold transition-all ${filter === 'ORPHANS' ? (theme === 'dark' ? 'bg-zinc-800 text-white shadow-inner' : 'bg-white text-gray-900 shadow-md') : (theme === 'dark' ? 'text-zinc-600 hover:text-zinc-300' : 'text-gray-500 hover:text-gray-700')}`}
+                    >
+                      {t.filters.orphans}
+                    </button>
+                  </div>
+                );
+              })()
+          }
         </div>
       </div>
 
@@ -125,13 +179,20 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
         <button
            onClick={onDeleteRejected}
-           disabled={stats.rejected === 0}
+           disabled={selectionMode === 'rating'
+             ? (filteredCount === 0 || filter === 'ALL')
+             : stats.rejected === 0}
            className={`h-9 px-3 xl:px-4 border rounded-lg text-[11px] font-bold transition-all disabled:opacity-30 disabled:pointer-events-none ${theme === 'dark' ? 'bg-rose-500/10 hover:bg-rose-500 text-rose-500 hover:text-white border-rose-500/30' : 'bg-rose-50 hover:bg-rose-500 text-rose-600 hover:text-white border-rose-300'}`}
-           title={language === 'zh' ? `确认删除 ${stats.rejected} 项` : `Confirm ${stats.rejected} Rejects`}
+           title={selectionMode === 'rating'
+             ? (language === 'zh' ? `\u5220\u9664\u5F53\u524D ${filteredCount} \u5F20` : `Delete ${filteredCount} filtered`)
+             : (language === 'zh' ? `\u786E\u8BA4\u5220\u9664 ${stats.rejected} \u9879` : `Confirm ${stats.rejected} Rejects`)}
         >
           <i className="fa-solid fa-trash-can xl:mr-2"></i>
-          <span className="hidden xl:inline">{language === 'zh' ? `确认删除 ${stats.rejected} 项` : `Confirm ${stats.rejected} Rejects`}</span>
-          <span className="xl:hidden ml-1">{stats.rejected}</span>
+          <span className="hidden xl:inline">{selectionMode === 'rating'
+            ? (language === 'zh' ? `\u5220\u9664\u5F53\u524D ${filteredCount} \u5F20` : `Delete ${filteredCount} filtered`)
+             : (language === 'zh' ? `\u786E\u8BA4\u5220\u9664 ${stats.rejected} \u9879` : `Confirm ${stats.rejected} Rejects`)
+          }</span>
+          <span className="xl:hidden ml-1">{selectionMode === 'rating' ? filteredCount : stats.rejected}</span>
         </button>
 
         <div className={`flex rounded-lg border overflow-hidden ${theme === 'dark' ? 'bg-zinc-950 border-zinc-800/50' : 'bg-white border-gray-300/50'}`}>
@@ -160,18 +221,26 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         <div className="relative" ref={exportMenuRef}>
           <button
             onClick={() => {
-              if (stats.picked === 0) {
-                alert("No photos are picked for export.");
+              const count = selectionMode === 'rating' ? filteredCount : stats.picked;
+              if (count === 0 || (selectionMode === 'rating' && filter === 'ALL')) {
+                alert(selectionMode === 'rating'
+                  ? (language === 'zh' ? '没有可导出的筛选照片。' : 'No filtered photos to export.')
+                  : (language === 'zh' ? '没有照片被精选。' : 'No photos are picked for export.'));
                 return;
               }
               onToggleExportMenu();
             }}
-            disabled={stats.picked === 0}
+            disabled={selectionMode === 'rating' ? (filteredCount === 0 || filter === 'ALL') : stats.picked === 0}
             className={`h-9 px-3 xl:px-5 rounded-lg text-[11px] font-bold shadow-lg flex items-center gap-2 transition-all disabled:opacity-30 disabled:pointer-events-none ${theme === 'dark' ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-600/20' : 'bg-indigo-500 hover:bg-indigo-600 text-white shadow-indigo-500/30'}`}
-            title={t.buttons.exportPicks}
+            title={selectionMode === 'rating'
+              ? (language === 'zh' ? `\u5BFC\u51FA\u5F53\u524D ${filteredCount} \u5F20` : `Export ${filteredCount} filtered`)
+              : t.buttons.exportPicks}
           >
             <i className="fa-solid fa-paper-plane"></i>
-            <span className="hidden xl:inline">{t.buttons.exportPicks}</span>
+            <span className="hidden xl:inline">{selectionMode === 'rating'
+              ? (language === 'zh' ? `\u5BFC\u51FA\u5F53\u524D ${filteredCount} \u5F20` : `Export ${filteredCount} filtered`)
+              : t.buttons.exportPicks
+            }</span>
           </button>
           {showExportMenu && (
             <div className={`absolute top-full right-0 mt-2 w-44 border rounded-xl shadow-2xl z-50 p-1 flex flex-col ${theme === 'dark' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-gray-200'}`}>

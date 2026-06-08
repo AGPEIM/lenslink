@@ -33,6 +33,7 @@ export function usePhotoState() {
       } : undefined,
       status: group.status as GroupStatus,
       selection: SelectionState.UNMARKED,
+      rating: 0,
       exif: group.exif
     }));
   }, []);
@@ -163,6 +164,11 @@ export function usePhotoState() {
   // Update photo selection
   const updatePhotoSelection = useCallback((photoId: string, selection: SelectionState) => {
     setPhotos(prev => prev.map(p => p.id === photoId ? { ...p, selection } : p));
+  }, []);
+
+  // Update photo rating
+  const updatePhotoRating = useCallback((photoId: string, rating: number) => {
+    setPhotos(prev => prev.map(p => p.id === photoId ? { ...p, rating: Math.max(0, Math.min(5, rating)) } : p));
   }, []);
 
   // Delete rejected photos
@@ -313,6 +319,76 @@ export function usePhotoState() {
     return exportedFiles.length;
   }, [photos]);
 
+  // Delete filtered photos (accepts any PhotoGroup array)
+  const deleteFilteredPhotos = useCallback(async (targetGroups: PhotoGroup[]): Promise<number> => {
+    if (targetGroups.length === 0) return 0;
+
+    const groupsToDelete = targetGroups.map(group => ({
+      id: group.id,
+      jpg: group.jpg ? {
+        name: group.jpg.name,
+        extension: group.jpg.extension,
+        path: group.jpg.path,
+        size: group.jpg.size
+      } : null,
+      raw: group.raw ? {
+        name: group.raw.name,
+        extension: group.raw.extension,
+        path: group.raw.path,
+        size: group.raw.size
+      } : null,
+      status: group.status,
+      exif: group.exif || null
+    }));
+
+    const movedFiles = await invoke<string[]>('move_to_trash', { groups: groupsToDelete });
+    const deletedIds = new Set(targetGroups.map(g => g.id));
+    setPhotos(prev => prev.filter(p => !deletedIds.has(p.id)));
+    return movedFiles.length;
+  }, []);
+
+  // Export filtered photos (accepts any PhotoGroup array)
+  const exportFilteredPhotos = useCallback(async (
+    targetGroups: PhotoGroup[],
+    exportMode: 'JPG' | 'RAW' | 'BOTH',
+    operation: 'COPY' | 'MOVE',
+    destinationFolder: string
+  ): Promise<number> => {
+    if (targetGroups.length === 0) return 0;
+
+    const groupsToExport = targetGroups.map(group => ({
+      id: group.id,
+      jpg: group.jpg ? {
+        name: group.jpg.name,
+        extension: group.jpg.extension,
+        path: group.jpg.path,
+        size: group.jpg.size
+      } : null,
+      raw: group.raw ? {
+        name: group.raw.name,
+        extension: group.raw.extension,
+        path: group.raw.path,
+        size: group.raw.size
+      } : null,
+      status: group.status,
+      exif: group.exif || null
+    }));
+
+    const exportedFiles = await invoke<string[]>('export_files', {
+      groups: groupsToExport,
+      exportMode: exportMode,
+      operation: operation,
+      destinationFolder: destinationFolder
+    });
+
+    if (operation === 'MOVE') {
+      const exportedIds = new Set(targetGroups.map(g => g.id));
+      setPhotos(prev => prev.filter(p => !exportedIds.has(p.id)));
+    }
+
+    return exportedFiles.length;
+  }, []);
+
   // Calculate statistics
   const stats = useMemo(() => {
     return {
@@ -323,6 +399,11 @@ export function usePhotoState() {
       orphanRaw: photos.filter(p => p.status === GroupStatus.RAW_ONLY).length,
       orphanJpg: photos.filter(p => p.status === GroupStatus.JPG_ONLY).length,
       unmarked: photos.filter(p => p.selection === SelectionState.UNMARKED).length,
+      rated: photos.filter(p => p.rating > 0).length,
+      unrated: photos.filter(p => p.rating === 0).length,
+      rating5: photos.filter(p => p.rating === 5).length,
+      rating4Plus: photos.filter(p => p.rating >= 4).length,
+      rating3Plus: photos.filter(p => p.rating >= 3).length,
     };
   }, [photos]);
 
@@ -333,9 +414,12 @@ export function usePhotoState() {
     importFiles,
     importFolder,
     updatePhotoSelection,
+    updatePhotoRating,
     deleteRejectedPhotos,
     deleteOrphanPhotos,
     forceDeletePhotos,
+    deleteFilteredPhotos,
     exportPickedPhotos,
+    exportFilteredPhotos,
   };
 }

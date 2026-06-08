@@ -4,7 +4,13 @@ export type ShortcutAction =
   | 'navigate_prev'
   | 'mark_picked'
   | 'mark_rejected'
-  | 'mark_unmarked';
+  | 'mark_unmarked'
+  | 'rate_1'
+  | 'rate_2'
+  | 'rate_3'
+  | 'rate_4'
+  | 'rate_5'
+  | 'clear_rating';
 
 // 单个快捷键配置
 export interface ShortcutBinding {
@@ -26,6 +32,12 @@ export const DEFAULT_SHORTCUTS: ShortcutConfig = {
     { action: 'mark_picked', key: 'p', displayKey: 'P' },
     { action: 'mark_rejected', key: 'x', displayKey: 'X' },
     { action: 'mark_unmarked', key: 'u', displayKey: 'U' },
+    { action: 'rate_1', key: '1', displayKey: '1' },
+    { action: 'rate_2', key: '2', displayKey: '2' },
+    { action: 'rate_3', key: '3', displayKey: '3' },
+    { action: 'rate_4', key: '4', displayKey: '4' },
+    { action: 'rate_5', key: '5', displayKey: '5' },
+    { action: 'clear_rating', key: '0', displayKey: '0' },
   ]
 };
 
@@ -42,6 +54,12 @@ export const SHORTCUT_ACTIONS_META: ShortcutActionMeta[] = [
   { action: 'mark_picked', icon: 'fa-flag', labelKey: 'markPicked' },
   { action: 'mark_rejected', icon: 'fa-trash-can', labelKey: 'markRejected' },
   { action: 'mark_unmarked', icon: 'fa-circle-dot', labelKey: 'markUnmarked' },
+  { action: 'rate_1', icon: 'fa-star', labelKey: 'rate1' },
+  { action: 'rate_2', icon: 'fa-star', labelKey: 'rate2' },
+  { action: 'rate_3', icon: 'fa-star', labelKey: 'rate3' },
+  { action: 'rate_4', icon: 'fa-star', labelKey: 'rate4' },
+  { action: 'rate_5', icon: 'fa-star', labelKey: 'rate5' },
+  { action: 'clear_rating', icon: 'fa-star-half-stroke', labelKey: 'clearRating' },
 ];
 
 // 按键显示名称映射
