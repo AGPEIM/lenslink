@@ -77,147 +77,218 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     };
   }, [showExportMenu, onToggleExportMenu]);
 
-  return (
-    <nav className={`h-14 border-b flex items-center justify-between px-6 z-20 backdrop-blur-md ${theme === 'dark' ? 'border-zinc-800 bg-zinc-900/80' : 'border-gray-200 bg-white/80'}`} data-tauri-drag-region>
-      <div className="flex items-center gap-6">
-        <div className="flex items-center gap-2">
-          <img
-            src={logoImg}
-            alt="LensLink Logo"
-            className="w-7 h-7 rounded-lg pointer-events-none object-contain"
-          />
-          <span className={`font-black text-sm tracking-tighter uppercase pointer-events-none ${theme === 'dark' ? 'text-zinc-100' : 'text-gray-900'}`}>{t.appName}</span>
-        </div>
+  // Shared icon button base classes
+  const iconBtnBase = 'h-8 px-2 xl:px-3 flex items-center justify-center rounded-lg transition-all text-xs font-medium';
+  const iconBtnDark = 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800';
+  const iconBtnLight = 'text-gray-500 hover:text-gray-800 hover:bg-gray-100';
+  const iconBtnDisabled = 'opacity-30 pointer-events-none';
 
-        <div className={`flex items-center gap-1 p-1 rounded-lg border ${theme === 'dark' ? 'bg-zinc-950 border-zinc-800/50' : 'bg-gray-100 border-gray-300/50'}`} data-tauri-drag-region="false" style={{WebkitAppRegion: 'no-drag'} as any}>
-          {selectionMode === 'pick_reject' 
-            ? (['ALL', 'PICKED', 'REJECTED', 'UNMARKED', 'ORPHANS'] as const).map(f => {
-                const filterKey = f.toLowerCase() as keyof typeof t.filters;
-                return (
-                  <button
-                    key={f}
-                    onClick={() => onFilterChange(f)}
-                    className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all ${filter === f ? (theme === 'dark' ? 'bg-zinc-800 text-white shadow-inner' : 'bg-white text-gray-900 shadow-md') : (theme === 'dark' ? 'text-zinc-600 hover:text-zinc-300' : 'text-gray-500 hover:text-gray-700')}`}
-                  >
-                    {t.filters[filterKey].toUpperCase()}
-                  </button>
-                );
-              })
-            : (() => {
-                const getActiveMinRating = (): number => {
-                  if (filter === 'RATING_5') return 5;
-                  if (filter === 'RATING_4_PLUS') return 4;
-                  if (filter === 'RATING_3_PLUS') return 3;
-                  if (filter === 'RATING_2_PLUS') return 2;
-                  if (filter === 'RATING_1_PLUS') return 1;
-                  return 0;
-                };
-                const activeMin = getActiveMinRating();
-                return (
-                  <div className="flex items-center gap-0.5">
-                    <button
-                      onClick={() => onFilterChange('ALL')}
-                      className={`px-2 py-1 rounded-md text-[10px] font-bold transition-all ${filter === 'ALL' ? (theme === 'dark' ? 'bg-zinc-800 text-white shadow-inner' : 'bg-white text-gray-900 shadow-md') : (theme === 'dark' ? 'text-zinc-600 hover:text-zinc-300' : 'text-gray-500 hover:text-gray-700')}`}
-                    >
-                      {t.filters.all}
-                    </button>
-                    <div className={`flex items-center mx-1 px-1.5 py-0.5 rounded-md ${theme === 'dark' ? 'bg-zinc-800/50' : 'bg-gray-200/50'}`}>
-                      {[1, 2, 3, 4, 5].map(star => {
-                        const filterForStar = (star === 5 ? 'RATING_5' : `RATING_${star}_PLUS`) as AppFilter;
-                        const isActive = star <= activeMin;
-                        return (
-                          <button
-                            key={star}
-                            onClick={() => onFilterChange(filter === filterForStar ? 'ALL' : filterForStar)}
-                            className={`w-6 h-6 flex items-center justify-center rounded transition-all ${filter === filterForStar ? (theme === 'dark' ? 'bg-zinc-800 shadow-inner' : 'bg-white shadow-md') : (theme === 'dark' ? 'hover:bg-zinc-800' : 'hover:bg-white')}`}
-                          >
-                            <i className={`fa-star ${isActive ? 'fa-solid text-amber-400' : `fa-regular ${theme === 'dark' ? 'text-zinc-500' : 'text-gray-400'}`} text-xs`}></i>
-                          </button>
-                        );
-                      })}
-                    </div>
-                    <button
-                      onClick={() => onFilterChange('UNRATED')}
-                      className={`px-2 py-1 rounded-md text-[10px] font-bold transition-all ${filter === 'UNRATED' ? (theme === 'dark' ? 'bg-zinc-800 text-white shadow-inner' : 'bg-white text-gray-900 shadow-md') : (theme === 'dark' ? 'text-zinc-600 hover:text-zinc-300' : 'text-gray-500 hover:text-gray-700')}`}
-                    >
-                      {t.filters.unrated}
-                    </button>
-                    <button
-                      onClick={() => onFilterChange('ORPHANS')}
-                      className={`px-2 py-1 rounded-md text-[10px] font-bold transition-all ${filter === 'ORPHANS' ? (theme === 'dark' ? 'bg-zinc-800 text-white shadow-inner' : 'bg-white text-gray-900 shadow-md') : (theme === 'dark' ? 'text-zinc-600 hover:text-zinc-300' : 'text-gray-500 hover:text-gray-700')}`}
-                    >
-                      {t.filters.orphans}
-                    </button>
-                  </div>
-                );
-              })()
-          }
-        </div>
+  // Segmented filter button classes
+  const segBase = 'px-2.5 py-1 rounded-md text-xs font-medium transition-all whitespace-nowrap';
+  const segActiveDark = 'bg-zinc-700/80 text-zinc-100 shadow-sm';
+  const segActiveLight = 'bg-white text-gray-900 shadow-sm';
+  const segInactiveDark = 'text-zinc-500 hover:text-zinc-300';
+  const segInactiveLight = 'text-gray-500 hover:text-gray-700';
+
+  // Divider
+  const dividerDark = 'w-px h-4 bg-zinc-700/60';
+  const dividerLight = 'w-px h-4 bg-gray-300/60';
+
+  const divider = theme === 'dark' ? dividerDark : dividerLight;
+
+  return (
+    <nav
+      className={`h-12 border-b flex items-center px-3 z-20 backdrop-blur-md overflow-hidden min-w-0 ${theme === 'dark' ? 'border-zinc-800 bg-zinc-900/95' : 'border-gray-200 bg-white/95'}`}
+      data-tauri-drag-region
+    >
+      {/* Left: Logo */}
+      <div className="flex items-center gap-2 flex-shrink-0" data-tauri-drag-region>
+        <img
+          src={logoImg}
+          alt="LensLink Logo"
+          className="w-6 h-6 rounded-md pointer-events-none object-contain"
+        />
+        <span className={`font-bold text-xs tracking-tight pointer-events-none ${theme === 'dark' ? 'text-zinc-300' : 'text-gray-700'}`}>
+          {t.appName}
+        </span>
       </div>
 
-      <div className="flex items-center gap-3" data-tauri-drag-region="false" style={{WebkitAppRegion: 'no-drag'} as any}>
-        <div className={`flex rounded-lg border overflow-hidden ${theme === 'dark' ? 'bg-zinc-950 border-zinc-800/50' : 'bg-white border-gray-300/50'}`}>
-          <button
-            onClick={onImportFiles}
-            disabled={isLoading}
-            className={`h-9 px-3 xl:px-4 text-[11px] font-bold flex items-center gap-2 transition-colors disabled:opacity-50 border-r ${theme === 'dark' ? 'text-zinc-400 hover:bg-zinc-900 border-zinc-800/50' : 'text-gray-600 hover:bg-gray-100 border-gray-300/50'}`}
-            title={isLoading ? t.buttons.loading : t.buttons.importFiles}
-          >
-            <i className={`fa-solid fa-file-circle-plus ${isLoading ? 'animate-pulse' : ''}`}></i>
-            <span className="hidden xl:inline">{isLoading ? t.buttons.loading : t.buttons.importFiles}</span>
-          </button>
-          <button
-            onClick={onImportFolder}
-            disabled={isLoading}
-            className={`h-9 px-3 xl:px-4 text-[11px] font-bold flex items-center gap-2 transition-colors disabled:opacity-50 ${theme === 'dark' ? 'text-zinc-400 hover:bg-zinc-900' : 'text-gray-600 hover:bg-gray-100'}`}
-            title={isLoading ? t.buttons.loading : t.buttons.importFolder}
-          >
-            <i className={`fa-solid fa-folder-open ${isLoading ? 'animate-pulse' : ''}`}></i>
-            <span className="hidden xl:inline">{isLoading ? t.buttons.loading : t.buttons.importFolder}</span>
-          </button>
-        </div>
+      {/* Divider */}
+      <div className={`${divider} mx-3 flex-shrink-0`} />
 
+      {/* Center: Filter segmented control */}
+      <div
+        className={`flex items-center gap-0.5 p-0.5 rounded-lg min-w-0 overflow-hidden ${theme === 'dark' ? 'bg-zinc-800/50' : 'bg-gray-100'}`}
+        data-tauri-drag-region="false"
+        style={{WebkitAppRegion: 'no-drag'} as any}
+      >
+        {selectionMode === 'pick_reject'
+          ? (['ALL', 'PICKED', 'REJECTED', 'UNMARKED', 'ORPHANS'] as const).map(f => {
+              const filterKey = f.toLowerCase() as keyof typeof t.filters;
+              return (
+                <button
+                  key={f}
+                  onClick={() => onFilterChange(f)}
+                  className={`${segBase} ${filter === f
+                    ? (theme === 'dark' ? segActiveDark : segActiveLight)
+                    : (theme === 'dark' ? segInactiveDark : segInactiveLight)
+                  }`}
+                >
+                  {t.filters[filterKey]}
+                </button>
+              );
+            })
+          : (() => {
+              const getActiveMinRating = (): number => {
+                if (filter === 'RATING_5') return 5;
+                if (filter === 'RATING_4_PLUS') return 4;
+                if (filter === 'RATING_3_PLUS') return 3;
+                if (filter === 'RATING_2_PLUS') return 2;
+                if (filter === 'RATING_1_PLUS') return 1;
+                return 0;
+              };
+              const activeMin = getActiveMinRating();
+              return (
+                <div className="flex items-center gap-0.5">
+                  <button
+                    onClick={() => onFilterChange('ALL')}
+                    className={`${segBase} ${filter === 'ALL'
+                      ? (theme === 'dark' ? segActiveDark : segActiveLight)
+                      : (theme === 'dark' ? segInactiveDark : segInactiveLight)
+                    }`}
+                  >
+                    {t.filters.all}
+                  </button>
+                  <div className={`flex items-center mx-0.5 px-1 py-0.5 rounded-md ${theme === 'dark' ? 'bg-zinc-900/50' : 'bg-gray-200/60'}`}>
+                    {[1, 2, 3, 4, 5].map(star => {
+                      const filterForStar = (star === 5 ? 'RATING_5' : `RATING_${star}_PLUS`) as AppFilter;
+                      const isActive = star <= activeMin;
+                      const isSelected = filter === filterForStar;
+                      return (
+                        <button
+                          key={star}
+                          onClick={() => onFilterChange(filter === filterForStar ? 'ALL' : filterForStar)}
+                          className={`w-6 h-6 flex items-center justify-center rounded transition-all ${isSelected
+                            ? (theme === 'dark' ? 'bg-zinc-600 shadow-sm' : 'bg-white shadow-sm')
+                            : (theme === 'dark' ? 'hover:bg-zinc-700' : 'hover:bg-white')
+                          }`}
+                        >
+                          <i className={`fa-star ${isActive
+                            ? 'fa-solid text-amber-400'
+                            : `fa-regular ${theme === 'dark' ? 'text-zinc-600' : 'text-gray-400'}`
+                          } text-xs`}></i>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <button
+                    onClick={() => onFilterChange('UNRATED')}
+                    className={`${segBase} ${filter === 'UNRATED'
+                      ? (theme === 'dark' ? segActiveDark : segActiveLight)
+                      : (theme === 'dark' ? segInactiveDark : segInactiveLight)
+                    }`}
+                  >
+                    {t.filters.unrated}
+                  </button>
+                  <button
+                    onClick={() => onFilterChange('ORPHANS')}
+                    className={`${segBase} ${filter === 'ORPHANS'
+                      ? (theme === 'dark' ? segActiveDark : segActiveLight)
+                      : (theme === 'dark' ? segInactiveDark : segInactiveLight)
+                    }`}
+                  >
+                    {t.filters.orphans}
+                  </button>
+                </div>
+              );
+            })()
+        }
+      </div>
+
+      {/* Spacer */}
+      <div className="flex-1" data-tauri-drag-region />
+
+      {/* Right: Action buttons */}
+      <div
+        className="flex items-center gap-1 flex-shrink-0"
+        data-tauri-drag-region="false"
+        style={{WebkitAppRegion: 'no-drag'} as any}
+      >
+        {/* Import group */}
         <button
-           onClick={onDeleteRejected}
-           disabled={selectionMode === 'rating'
-             ? (filteredCount === 0 || filter === 'ALL')
-             : stats.rejected === 0}
-           className={`h-9 px-3 xl:px-4 border rounded-lg text-[11px] font-bold transition-all disabled:opacity-30 disabled:pointer-events-none ${theme === 'dark' ? 'bg-rose-500/10 hover:bg-rose-500 text-rose-500 hover:text-white border-rose-500/30' : 'bg-rose-50 hover:bg-rose-500 text-rose-600 hover:text-white border-rose-300'}`}
-           title={selectionMode === 'rating'
-             ? (language === 'zh' ? `\u5220\u9664\u5F53\u524D ${filteredCount} \u5F20` : `Delete ${filteredCount} filtered`)
-             : (language === 'zh' ? `\u786E\u8BA4\u5220\u9664 ${stats.rejected} \u9879` : `Confirm ${stats.rejected} Rejects`)}
+          onClick={onImportFiles}
+          disabled={isLoading}
+          className={`${iconBtnBase} ${isLoading ? iconBtnDisabled : ''} ${theme === 'dark' ? iconBtnDark : iconBtnLight}`}
+          title={isLoading ? t.buttons.loading : t.buttons.importFiles}
         >
-          <i className="fa-solid fa-trash-can xl:mr-2"></i>
-          <span className="hidden xl:inline">{selectionMode === 'rating'
-            ? (language === 'zh' ? `\u5220\u9664\u5F53\u524D ${filteredCount} \u5F20` : `Delete ${filteredCount} filtered`)
-             : (language === 'zh' ? `\u786E\u8BA4\u5220\u9664 ${stats.rejected} \u9879` : `Confirm ${stats.rejected} Rejects`)
-          }</span>
-          <span className="xl:hidden ml-1">{selectionMode === 'rating' ? filteredCount : stats.rejected}</span>
+          <i className={`fa-solid fa-file-circle-plus text-sm ${isLoading ? 'animate-pulse' : ''}`}></i>
+          <span className="hidden xl:inline ml-1.5 whitespace-nowrap">{t.buttons.importFiles}</span>
+        </button>
+        <button
+          onClick={onImportFolder}
+          disabled={isLoading}
+          className={`${iconBtnBase} ${isLoading ? iconBtnDisabled : ''} ${theme === 'dark' ? iconBtnDark : iconBtnLight}`}
+          title={isLoading ? t.buttons.loading : t.buttons.importFolder}
+        >
+          <i className={`fa-solid fa-folder-open text-sm ${isLoading ? 'animate-pulse' : ''}`}></i>
+          <span className="hidden xl:inline ml-1.5 whitespace-nowrap">{t.buttons.importFolder}</span>
         </button>
 
-        <div className={`flex rounded-lg border overflow-hidden ${theme === 'dark' ? 'bg-zinc-950 border-zinc-800/50' : 'bg-white border-gray-300/50'}`}>
-          <button
-            onClick={onDeleteOrphanRaw}
-            disabled={stats.orphanRaw === 0}
-            className={`h-9 px-2 xl:px-3 text-[11px] font-bold flex items-center gap-1.5 transition-colors disabled:opacity-30 disabled:pointer-events-none border-r ${theme === 'dark' ? 'text-amber-400 hover:bg-amber-500/10 border-zinc-800/50' : 'text-amber-600 hover:bg-amber-50 border-gray-300/50'}`}
-            title={language === 'zh' ? `删RAW (${stats.orphanRaw})` : `Del RAW (${stats.orphanRaw})`}
-          >
-            <i className="fa-solid fa-file-image"></i>
-            <span className="hidden xl:inline">{language === 'zh' ? `删RAW` : `Del RAW`}</span>
-            <span>({stats.orphanRaw})</span>
-          </button>
-          <button
-            onClick={onDeleteOrphanJpg}
-            disabled={stats.orphanJpg === 0}
-            className={`h-9 px-2 xl:px-3 text-[11px] font-bold flex items-center gap-1.5 transition-colors disabled:opacity-30 disabled:pointer-events-none ${theme === 'dark' ? 'text-amber-400 hover:bg-amber-500/10' : 'text-amber-600 hover:bg-amber-50'}`}
-            title={language === 'zh' ? `删JPG (${stats.orphanJpg})` : `Del JPG (${stats.orphanJpg})`}
-          >
-            <i className="fa-solid fa-image"></i>
-            <span className="hidden xl:inline">{language === 'zh' ? `删JPG` : `Del JPG`}</span>
-            <span>({stats.orphanJpg})</span>
-          </button>
-        </div>
+        {/* Divider */}
+        <div className={`${divider} mx-0.5`} />
 
+        {/* Delete group */}
+        <button
+          onClick={onDeleteRejected}
+          disabled={selectionMode === 'rating'
+            ? (filteredCount === 0 || filter === 'ALL')
+            : stats.rejected === 0}
+          className={`${iconBtnBase} ${(selectionMode === 'rating'
+            ? (filteredCount === 0 || filter === 'ALL')
+            : stats.rejected === 0) ? iconBtnDisabled : ''} ${theme === 'dark'
+              ? 'text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10'
+              : 'text-gray-500 hover:text-rose-500 hover:bg-rose-50'
+          }`}
+          title={selectionMode === 'rating'
+            ? (language === 'zh' ? `删除当前 ${filteredCount} 张` : `Delete ${filteredCount} filtered`)
+            : (language === 'zh' ? `确认删除 ${stats.rejected} 项` : `Confirm ${stats.rejected} Rejects`)}
+        >
+          <i className="fa-solid fa-trash-can text-sm"></i>
+          <span className="hidden xl:inline ml-1.5 whitespace-nowrap">
+            {selectionMode === 'rating'
+              ? (language === 'zh' ? `删除 ${filteredCount} 项` : `Del ${filteredCount}`)
+              : (language === 'zh' ? `删除 ${stats.rejected} 项` : `Del ${stats.rejected}`)}
+          </span>
+        </button>
+        <button
+          onClick={onDeleteOrphanRaw}
+          disabled={stats.orphanRaw === 0}
+          className={`${iconBtnBase} ${stats.orphanRaw === 0 ? iconBtnDisabled : ''} ${theme === 'dark'
+              ? 'text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10'
+              : 'text-gray-500 hover:text-rose-500 hover:bg-rose-50'
+          }`}
+          title={language === 'zh' ? `删RAW (${stats.orphanRaw})` : `Del RAW (${stats.orphanRaw})`}
+        >
+          <i className="fa-solid fa-file-image text-sm"></i>
+          <span className="hidden xl:inline ml-1.5 whitespace-nowrap">{language === 'zh' ? `删RAW (${stats.orphanRaw})` : `Del RAW (${stats.orphanRaw})`}</span>
+        </button>
+        <button
+          onClick={onDeleteOrphanJpg}
+          disabled={stats.orphanJpg === 0}
+          className={`${iconBtnBase} ${stats.orphanJpg === 0 ? iconBtnDisabled : ''} ${theme === 'dark'
+              ? 'text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10'
+              : 'text-gray-500 hover:text-rose-500 hover:bg-rose-50'
+          }`}
+          title={language === 'zh' ? `删JPG (${stats.orphanJpg})` : `Del JPG (${stats.orphanJpg})`}
+        >
+          <i className="fa-solid fa-image text-sm"></i>
+          <span className="hidden xl:inline ml-1.5 whitespace-nowrap">{language === 'zh' ? `删JPG (${stats.orphanJpg})` : `Del JPG (${stats.orphanJpg})`}</span>
+        </button>
+
+        {/* Divider */}
+        <div className={`${divider} mx-0.5`} />
+
+        {/* Export */}
         <div className="relative" ref={exportMenuRef}>
           <button
             onClick={() => {
@@ -231,58 +302,81 @@ export const Toolbar: React.FC<ToolbarProps> = ({
               onToggleExportMenu();
             }}
             disabled={selectionMode === 'rating' ? (filteredCount === 0 || filter === 'ALL') : stats.picked === 0}
-            className={`h-9 px-3 xl:px-5 rounded-lg text-[11px] font-bold shadow-lg flex items-center gap-2 transition-all disabled:opacity-30 disabled:pointer-events-none ${theme === 'dark' ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-600/20' : 'bg-indigo-500 hover:bg-indigo-600 text-white shadow-indigo-500/30'}`}
+            className={`${iconBtnBase} ${(selectionMode === 'rating' ? (filteredCount === 0 || filter === 'ALL') : stats.picked === 0) ? iconBtnDisabled : ''} ${theme === 'dark'
+              ? 'bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 hover:text-indigo-300'
+              : 'bg-indigo-50 text-indigo-500 hover:bg-indigo-100 hover:text-indigo-600'
+            }`}
             title={selectionMode === 'rating'
-              ? (language === 'zh' ? `\u5BFC\u51FA\u5F53\u524D ${filteredCount} \u5F20` : `Export ${filteredCount} filtered`)
+              ? (language === 'zh' ? `导出当前 ${filteredCount} 张` : `Export ${filteredCount} filtered`)
               : t.buttons.exportPicks}
           >
-            <i className="fa-solid fa-paper-plane"></i>
-            <span className="hidden xl:inline">{selectionMode === 'rating'
-              ? (language === 'zh' ? `\u5BFC\u51FA\u5F53\u524D ${filteredCount} \u5F20` : `Export ${filteredCount} filtered`)
-              : t.buttons.exportPicks
-            }</span>
+            <i className="fa-solid fa-paper-plane text-sm"></i>
+            <span className="hidden xl:inline ml-1.5 whitespace-nowrap">{t.buttons.exportPicks}</span>
           </button>
           {showExportMenu && (
             <div className={`absolute top-full right-0 mt-2 w-44 border rounded-xl shadow-2xl z-50 p-1 flex flex-col ${theme === 'dark' ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-gray-200'}`}>
-              <button onClick={() => { onExportStart('JPG'); onToggleExportMenu(); }} className={`px-4 py-2.5 text-[10px] font-bold text-left rounded-lg transition-colors ${theme === 'dark' ? 'text-zinc-400 hover:bg-zinc-800 hover:text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'}`}>{t.exportMenu.jpgOnly}</button>
-              <button onClick={() => { onExportStart('RAW'); onToggleExportMenu(); }} className={`px-4 py-2.5 text-[10px] font-bold text-left rounded-lg transition-colors ${theme === 'dark' ? 'text-zinc-400 hover:bg-zinc-800 hover:text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'}`}>{t.exportMenu.rawOnly}</button>
-              <button onClick={() => { onExportStart('BOTH'); onToggleExportMenu(); }} className={`px-4 py-2.5 text-[10px] font-bold text-left rounded-lg transition-colors border-t mt-1 pt-2 ${theme === 'dark' ? 'text-zinc-400 hover:bg-zinc-800 hover:text-white border-zinc-800' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 border-gray-200'}`}>{t.exportMenu.rawAndJpg}</button>
+              <button
+                onClick={() => { onExportStart('JPG'); onToggleExportMenu(); }}
+                className={`px-4 py-2.5 text-xs font-medium text-left rounded-lg transition-colors ${theme === 'dark' ? 'text-zinc-400 hover:bg-zinc-800 hover:text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'}`}
+              >
+                {t.exportMenu.jpgOnly}
+              </button>
+              <button
+                onClick={() => { onExportStart('RAW'); onToggleExportMenu(); }}
+                className={`px-4 py-2.5 text-xs font-medium text-left rounded-lg transition-colors ${theme === 'dark' ? 'text-zinc-400 hover:bg-zinc-800 hover:text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'}`}
+              >
+                {t.exportMenu.rawOnly}
+              </button>
+              <button
+                onClick={() => { onExportStart('BOTH'); onToggleExportMenu(); }}
+                className={`px-4 py-2.5 text-xs font-medium text-left rounded-lg transition-colors border-t mt-1 pt-2 ${theme === 'dark' ? 'text-zinc-400 hover:bg-zinc-800 hover:text-white border-zinc-800' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 border-gray-200'}`}
+              >
+                {t.exportMenu.rawAndJpg}
+              </button>
             </div>
           )}
         </div>
 
+        {/* Divider */}
+        <div className={`${divider} mx-0.5`} />
+
+        {/* Settings */}
         <button
           onClick={onSettingsClick}
-          className={`w-9 h-9 flex items-center justify-center rounded-lg transition-all ${theme === 'dark' ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-zinc-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-600 hover:text-gray-800'}`}
+          className={`w-8 h-8 flex items-center justify-center rounded-lg transition-all flex-shrink-0 ${theme === 'dark' ? iconBtnDark : iconBtnLight}`}
           title={t.settings.title}
         >
           <i className="fa-solid fa-gear text-sm"></i>
         </button>
 
+        {/* Window controls (Windows only) */}
         {!isMacOS && (
-          <div className={`flex items-center gap-1 ml-2 border-l pl-3 ${theme === 'dark' ? 'border-zinc-800' : 'border-gray-300'}`}>
-            <button
-              onClick={onMinimize}
-              className={`w-9 h-9 flex items-center justify-center rounded transition-colors ${theme === 'dark' ? 'hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200' : 'hover:bg-gray-200 text-gray-500 hover:text-gray-700'}`}
-              title={t.window.minimize}
-            >
-              <i className="fa-solid fa-window-minimize text-[10px]"></i>
-            </button>
-            <button
-              onClick={onMaximize}
-              className={`w-9 h-9 flex items-center justify-center rounded transition-colors ${theme === 'dark' ? 'hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200' : 'hover:bg-gray-200 text-gray-500 hover:text-gray-700'}`}
-              title={t.window.maximize}
-            >
-              <i className="fa-regular fa-window-maximize text-xs"></i>
-            </button>
-            <button
-              onClick={onClose}
-              className={`w-9 h-9 flex items-center justify-center rounded hover:bg-red-600 transition-colors hover:text-white ${theme === 'dark' ? 'text-zinc-400' : 'text-gray-500'}`}
-              title={t.window.close}
-            >
-              <i className="fa-solid fa-xmark text-sm"></i>
-            </button>
-          </div>
+          <>
+            <div className={`${divider} mx-0.5`} />
+            <div className="flex items-center gap-0.5">
+              <button
+                onClick={onMinimize}
+                className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${theme === 'dark' ? 'hover:bg-zinc-800 text-zinc-500 hover:text-zinc-300' : 'hover:bg-gray-200 text-gray-400 hover:text-gray-600'}`}
+                title={t.window.minimize}
+              >
+                <i className="fa-solid fa-window-minimize text-[10px]"></i>
+              </button>
+              <button
+                onClick={onMaximize}
+                className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${theme === 'dark' ? 'hover:bg-zinc-800 text-zinc-500 hover:text-zinc-300' : 'hover:bg-gray-200 text-gray-400 hover:text-gray-600'}`}
+                title={t.window.maximize}
+              >
+                <i className="fa-regular fa-window-maximize text-xs"></i>
+              </button>
+              <button
+                onClick={onClose}
+                className={`w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-600 transition-colors hover:text-white ${theme === 'dark' ? 'text-zinc-500' : 'text-gray-400'}`}
+                title={t.window.close}
+              >
+                <i className="fa-solid fa-xmark text-sm"></i>
+              </button>
+            </div>
+          </>
         )}
       </div>
     </nav>
