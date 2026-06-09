@@ -62,8 +62,8 @@ export const Filmstrip: React.FC<FilmstripProps> = ({
           <LazyThumbnail group={p} />
 
           {/* Selection Marker */}
-          {selectionMode === 'pick_reject' && p.selection === SelectionState.PICKED && <div className="absolute inset-0 border-4 border-emerald-500/50 bg-emerald-500/10 flex items-center justify-center"><i className="fa-solid fa-flag text-emerald-500 text-xs"></i></div>}
-          {selectionMode === 'pick_reject' && p.selection === SelectionState.REJECTED && <div className="absolute inset-0 border-4 border-rose-500/50 bg-rose-500/20 flex items-center justify-center"><i className="fa-solid fa-xmark text-rose-500 text-xs"></i></div>}
+          {selectionMode === 'pick_reject' && p.selection === SelectionState.PICKED && <div className="absolute inset-0 border-4 border-emerald-400 bg-emerald-500/30 flex items-center justify-center"><i className="fa-solid fa-flag text-emerald-300 text-sm drop-shadow-md"></i></div>}
+          {selectionMode === 'pick_reject' && p.selection === SelectionState.REJECTED && <div className="absolute inset-0 border-4 border-rose-400 bg-rose-500/35 flex items-center justify-center"><i className="fa-solid fa-xmark text-rose-300 text-sm drop-shadow-md"></i></div>}
           {selectionMode === 'rating' && p.rating > 0 && (
             <div className="absolute inset-0 bg-amber-500/15 flex items-center justify-center gap-0.5">
               {Array.from({ length: p.rating }, (_, i) => (
