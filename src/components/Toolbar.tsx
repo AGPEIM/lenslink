@@ -98,7 +98,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
   return (
     <nav
-      className={`h-12 border-b flex items-center px-3 z-20 backdrop-blur-md overflow-hidden min-w-0 ${theme === 'dark' ? 'border-zinc-800 bg-zinc-900/95' : 'border-gray-200 bg-white/95'}`}
+      className={`h-12 border-b flex items-center px-3 z-20 backdrop-blur-md min-w-0 ${theme === 'dark' ? 'border-zinc-800 bg-zinc-900/95' : 'border-gray-200 bg-white/95'}`}
       data-tauri-drag-region
     >
       {/* Left: Logo */}
