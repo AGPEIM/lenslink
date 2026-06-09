@@ -31,7 +31,7 @@
 ### Why LensLink?
 
 - 🎯 **Smart Photo Grouping** - Automatically pairs RAW and JPG files with the same base name
-- ⚡ **Lightning Fast Culling** - Keyboard shortcuts for rapid photo selection (P/X/U)
+- ⚡ **Lightning Fast Culling** - Keyboard shortcuts for rapid photo selection (P/X/U) or star rating (1-5)
 - 🔍 **RAW Preview Support** - View RAW files directly with WebAssembly-powered decoding
 - 📊 **EXIF Data Display** - Complete metadata viewing including camera settings and lens information
 - 🎨 **Modern UI/UX** - Beautiful dark/light themes with smooth animations
@@ -54,10 +54,18 @@
 ### 🎬 Professional Viewer
 
 - **Zoom & Pan**: Mouse wheel zoom (10%-1000%) with drag support
+- **Image Rotation**: Rotate images for better viewing angle
 - **RAW Decoding**: Native support for CR2, NEF, ARW, DNG, and more formats
 - **EXIF Display**: Shutter speed, aperture, ISO, focal length, camera model, lens, timestamp
-- **Quick Rating**: Keyboard shortcuts for Pick (P), Reject (X), Unmark (U)
+- **Dual Selection Modes**: Switch between Pick/Reject and Star Rating workflows
 - **Smooth Navigation**: Arrow keys and filmstrip for browsing
+
+### ⭐ Selection Modes
+
+- **Pick/Reject Mode**: Classic culling workflow with keyboard shortcuts (P/X/U)
+- **Star Rating Mode**: Rate photos from 1-5 stars using number keys, press 0 to clear
+- **Mode Switching**: Easily toggle between modes in the Settings panel
+- **Smart Filtering**: Filter by rating threshold (5★, 4+★, 3+★, unrated)
 
 ### 🚀 Batch Operations
 
@@ -74,7 +82,7 @@
 - **Themes**: Dark and light mode with system preference detection
 - **Responsive Layout**: Optimized for different screen sizes
 - **Window Management**: Custom titlebar with minimize, maximize, and close controls
-- **Settings Panel**: Customize language and theme preferences
+- **Settings Panel**: Customize language, theme, animation, and selection mode preferences
 - **Keyboard Navigation**: Full keyboard support for efficient workflow
 
 ---
@@ -144,11 +152,17 @@ Click the **Import Folder** button or use the file picker to load your RAW+JPG p
 
 ### 2. Review & Rate
 
+**Pick/Reject Mode (default):**
 - Use **Arrow Keys** (← →) to navigate between photos
 - Press **P** to mark as Pick (keep)
 - Press **X** to mark as Reject (delete later)
 - Press **U** to Unmark
 - Use mouse wheel to **zoom** in/out
+
+**Star Rating Mode:**
+- Press **1-5** to assign star rating
+- Press **0** to clear rating
+- Switch modes in Settings panel
 
 ### 3. Filter & Sort
 
@@ -169,11 +183,25 @@ Use the filter buttons to view:
 
 ## ⌨️ Keyboard Shortcuts
 
+### Pick/Reject Mode
+
 | Key | Action |
 |-----|--------|
 | `P` | Mark current photo as **Picked** |
 | `X` | Mark current photo as **Rejected** |
 | `U` | **Unmark** current photo |
+
+### Star Rating Mode
+
+| Key | Action |
+|-----|--------|
+| `1-5` | Assign **star rating** (1-5 stars) |
+| `0` | **Clear** rating |
+
+### General
+
+| Key | Action |
+|-----|--------|
 | `←` | Navigate to **previous** photo |
 | `→` | Navigate to **next** photo |
 | `Mouse Wheel` | **Zoom** in/out |
