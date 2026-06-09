@@ -1,6 +1,6 @@
 [package]
 name = "lenslink"
-version = "0.1.1"
+version = "1.1.0"
 description = "LensLink - RAW + JPG Manager"
 authors = ["AGPEIM"]
 repository = "https://github.com/AGPEIM/lenslink"
