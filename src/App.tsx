@@ -17,6 +17,7 @@ import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { usePhotoState } from './hooks/usePhotoState';
 import { useModalState } from './hooks/useModalState';
 import { usePhotoNavigation } from './hooks/usePhotoNavigation';
+import { useAutoCull } from './hooks/useAutoCull';
 
 const App: React.FC = () => {
   // Settings
@@ -36,6 +37,7 @@ const App: React.FC = () => {
 
   // Custom hooks for state management
   const photoState = usePhotoState();
+  const autoCull = useAutoCull(photoState.updatePhotoAnalysis);
   const modalState = useModalState();
   const navigation = usePhotoNavigation(photoState.photos, enableAnimation, selectionMode);
   const t = getTranslations(language);
@@ -135,6 +137,18 @@ const App: React.FC = () => {
     } catch (error) {
       console.error('Failed to import folder:', error);
       alert(`${t.messages.importFailed}: ${error}`);
+    }
+  };
+
+  const handleAutoCull = async () => {
+    try {
+      const summary = await autoCull.run(photoState.photos);
+      if (!summary) return;
+      setSelectionMode('pick_reject');
+      navigation.setFilter('ALL');
+      alert(`${summary.cancelled ? t.autoCull.stopped : t.autoCull.completed}\n${t.autoCull.processed}: ${summary.processed}\n${t.autoCull.rejected}: ${summary.rejected}\n${t.autoCull.skipped}: ${summary.skipped}\n${t.autoCull.failed}: ${summary.failed}\n\n${t.autoCull.review}`);
+    } catch (error) {
+      alert(`${t.autoCull.startFailed}: ${error instanceof Error ? error.message : String(error)}`);
     }
   };
 
@@ -318,7 +332,7 @@ const App: React.FC = () => {
 
   // Keyboard shortcuts
   useKeyboardShortcuts({
-    enabled: navigation.selectedIndex !== null,
+    enabled: navigation.selectedIndex !== null && !autoCull.progress,
     onNavigate: navigation.navigate,
     onUpdateSelection: (state: SelectionState) => {
       navigation.updateSelectionWithAnimation(state, photoState.updatePhotoSelection);
@@ -348,6 +362,8 @@ const App: React.FC = () => {
         isLoading={photoState.isLoading}
         onImportFiles={handleImportFiles}
         onImportFolder={handleImportFolder}
+        onAutoCull={handleAutoCull}
+        canAutoCull={photoState.photos.length > 0}
         stats={photoState.stats}
         onDeleteRejected={() => modalState.setShowDeleteConfirm(true)}
         filteredCount={navigation.filteredPhotos.length}
@@ -362,6 +378,26 @@ const App: React.FC = () => {
         onMaximize={handleMaximize}
         onClose={handleClose}
       />
+
+      {autoCull.progress && (
+        <div className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-6" role="dialog" aria-modal="true" aria-labelledby="auto-cull-title" onKeyDown={event => {
+          if (event.key === 'Tab') {
+            event.preventDefault();
+            event.currentTarget.querySelector('button')?.focus();
+          }
+          if (event.key === 'Escape') autoCull.cancel();
+        }}>
+          <div className={`w-full max-w-md rounded-xl border p-6 shadow-xl ${theme === 'dark' ? 'bg-zinc-900 border-zinc-700 text-zinc-100' : 'bg-white border-gray-200 text-gray-900'}`}>
+            <h2 id="auto-cull-title" className="text-lg font-bold">{t.autoCull.button}</h2>
+            <p className="mt-2 text-sm opacity-70">{t.autoCull.description}</p>
+            <p className="mt-4 text-sm truncate" role="status" aria-live="polite">
+              {autoCull.progress.loadingModel ? t.autoCull.loadingModel : `${autoCull.progress.completed} / ${autoCull.progress.total} · ${autoCull.progress.filename}`}
+            </p>
+            <progress className="mt-3 w-full accent-indigo-500" max={autoCull.progress.total} value={autoCull.progress.completed} aria-label={t.autoCull.processed} />
+            <button autoFocus onClick={autoCull.cancel} className="mt-4 px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-500">{t.autoCull.stop}</button>
+          </div>
+        </div>
+      )}
 
       {/* Main Workspace */}
       <main className="flex-1 flex flex-col overflow-hidden">

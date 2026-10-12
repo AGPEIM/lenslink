@@ -4,6 +4,8 @@
   "version": "1.1.0",
   "type": "module",
   "scripts": {
+    "test:culling": "node tests/culling.test.cjs",
+    "test:performance": "node tests/performance.test.cjs",
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
@@ -11,6 +13,7 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@mediapipe/tasks-vision": "1.1.0",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-dialog": "^2.5.0",
     "@tauri-apps/plugin-fs": "^2.4.5",

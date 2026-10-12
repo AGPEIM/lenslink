@@ -38,6 +38,26 @@ export interface PhotoGroup {
   selection: SelectionState;
   rating: number; // 0 = unrated, 1-5 = star rating
   exif?: ExifData;
+  autoCull?: AutoCullResult;
+}
+
+export type CullIssue = 'closed_eyes' | 'out_of_focus';
+
+export interface FaceQuality {
+  index: number;
+  closedEyes: boolean;
+  outOfFocus: boolean;
+  bounds: { x: number; y: number; width: number; height: number };
+  sharpness: number;
+  eyeSharpness: number;
+  analyzable: boolean;
+}
+
+export interface AutoCullResult {
+  status: 'analyzed' | 'no_face' | 'uncertain' | 'error';
+  faces: FaceQuality[];
+  issues: CullIssue[];
+  error?: string;
 }
 
 export type ExportMode = 'RAW' | 'JPG' | 'BOTH';

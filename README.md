@@ -50,6 +50,7 @@
 - **Status Indicators**: Visual badges for complete pairs, JPG-only, or RAW-only files
 - **Flexible Import**: Support for both individual files and folder imports
 - **Orphan Detection**: Identifies unpaired files for cleanup
+- **Large Libraries**: The filmstrip renders only nearby thumbnails. JPG previews are decoded asynchronously with two concurrent loads and a bounded 128-preview cache; file scanning runs in the background.
 
 ### 🎬 Professional Viewer
 
@@ -66,6 +67,14 @@
 - **Star Rating Mode**: Rate photos from 1-5 stars using number keys, press 0 to clear
 - **Mode Switching**: Easily toggle between modes in the Settings panel
 - **Smart Filtering**: Filter by rating threshold (5★, 4+★, 3+★, unrated)
+
+### Offline Auto Cull
+
+After importing photos, click **Auto Cull** beside the import buttons. Bundled MediaPipe models run on the local CPU to detect closed or noticeably half-closed eyes, using both blink scores and eyelid geometry. Face and eye sharpness measurements also flag severe softness. No photo uploads or online inference are required; the connection policy blocks the SDK's external usage logging.
+
+Suspected problems are marked as Rejects with a reason in the viewer. Auto Cull does not delete, move, or modify original files. Review the marks before using the existing delete action. Screening can be stopped, and completed marks remain. Marks are kept only for the current application session, like manual selections.
+
+JPG is preferred for paired files; RAW-only groups use the existing decoder. Up to 20 of the largest detected faces are examined per photo. Small or unassessable faces do not trigger automatic rejection, and focus rejection requires all assessable main faces to be severely soft. Intentional closed eyes, smiling squints, downward gaze, shallow depth of field, low light, profiles, and soft-focus effects can cause false positives or missed detections.
 
 ### 🚀 Batch Operations
 
@@ -247,6 +256,8 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
+
+Before submitting, run `pnpm run test:culling`, `pnpm run test:performance`, and `pnpm run build`. The tests cover screening decisions, reject marking, RAW worker recovery, filmstrip bounds, and thumbnail concurrency, caching, errors, and cancellation. Real-photo validation should use local files; private photos should not be committed.
 
 ---
 

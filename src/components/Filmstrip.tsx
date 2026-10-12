@@ -1,6 +1,7 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useLayoutEffect, useState } from 'react';
 import { PhotoGroup, SelectionState, SelectionMode } from '../types';
 import LazyThumbnail from './LazyThumbnail';
+import { filmstripRange, THUMBNAIL_WIDTH, THUMBNAIL_STRIDE, FILMSTRIP_PADDING } from '../utils/filmstripRange';
 
 interface FilmstripProps {
   theme: 'light' | 'dark';
@@ -18,16 +19,28 @@ export const Filmstrip: React.FC<FilmstripProps> = ({
   selectionMode,
 }) => {
   const filmstripRef = useRef<HTMLDivElement>(null);
+  const [viewport, setViewport] = useState({ left: 0, width: 0 });
 
-  // Scroll filmstrip to active index
-  useEffect(() => {
-    if (selectedIndex !== null && filmstripRef.current) {
-      const activeEl = filmstripRef.current.children[selectedIndex] as HTMLElement;
-      if (activeEl) {
-        activeEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-      }
+  useLayoutEffect(() => {
+    const element = filmstripRef.current;
+    if (!element) return;
+    const resize = new ResizeObserver(() => setViewport({ left: element.scrollLeft, width: element.clientWidth }));
+    resize.observe(element);
+    return () => resize.disconnect();
+  }, []);
+
+  // Keep navigation independent of whether the selected thumbnail is mounted.
+  useLayoutEffect(() => {
+    const element = filmstripRef.current;
+    if (!element || selectedIndex === null) return;
+    const left = FILMSTRIP_PADDING + selectedIndex * THUMBNAIL_STRIDE;
+    if (left < element.scrollLeft + FILMSTRIP_PADDING || left + THUMBNAIL_WIDTH > element.scrollLeft + element.clientWidth - FILMSTRIP_PADDING) {
+      element.scrollLeft = left - (element.clientWidth - THUMBNAIL_WIDTH) / 2;
     }
-  }, [selectedIndex]);
+    setViewport({ left: element.scrollLeft, width: element.clientWidth });
+  }, [selectedIndex, filteredPhotos.length]);
+
+  const { start, end } = filmstripRange(filteredPhotos.length, viewport.left, viewport.width);
 
   // Handle mouse wheel event for photo navigation
   const handleWheel = (e: React.WheelEvent) => {
@@ -47,15 +60,25 @@ export const Filmstrip: React.FC<FilmstripProps> = ({
 
   return (
     <div
-      className={`h-28 border-t flex items-center px-4 gap-2 overflow-x-auto overflow-y-hidden ${theme === 'dark' ? 'bg-zinc-900 border-zinc-800' : 'bg-gray-100 border-gray-200'}`}
+      className={`h-28 flex-shrink-0 border-t px-4 overflow-x-auto overflow-y-hidden ${theme === 'dark' ? 'bg-zinc-900 border-zinc-800' : 'bg-gray-100 border-gray-200'}`}
       ref={filmstripRef}
       onWheel={handleWheel}
+      onScroll={event => setViewport({ left: event.currentTarget.scrollLeft, width: event.currentTarget.clientWidth })}
+      data-testid="filmstrip"
     >
-      {filteredPhotos.map((p, idx) => (
+      <div className="relative h-full" style={{ width: Math.max(0, filteredPhotos.length * THUMBNAIL_STRIDE - 8) }}>
+      {filteredPhotos.slice(start, end).map((p, offset) => {
+        const idx = start + offset;
+        return (
         <button
-          key={p.id}
+          key={p.jpg?.path || p.raw?.path || p.id}
           onClick={() => onSelectPhoto(idx)}
-          className={`flex-shrink-0 h-20 w-32 relative rounded-md overflow-hidden border-2 transition-all group ${
+          aria-label={p.id}
+          aria-pressed={selectedIndex === idx}
+          aria-posinset={idx + 1}
+          aria-setsize={filteredPhotos.length}
+          style={{ left: idx * THUMBNAIL_STRIDE, top: 14 }}
+          className={`h-20 w-32 absolute rounded-md overflow-hidden border-2 transition-colors group ${
             selectedIndex === idx ? 'border-indigo-500 scale-105 z-10' : 'border-transparent opacity-60 hover:opacity-100 hover:border-zinc-700'
           }`}
         >
@@ -76,7 +99,9 @@ export const Filmstrip: React.FC<FilmstripProps> = ({
             {p.id}
           </div>
         </button>
-      ))}
+        );
+      })}
+      </div>
     </div>
   );
 };

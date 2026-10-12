@@ -13,6 +13,8 @@ interface ToolbarProps {
   isLoading: boolean;
   onImportFiles: () => void;
   onImportFolder: () => void;
+  onAutoCull: () => void;
+  canAutoCull: boolean;
   stats: {
     rejected: number;
     picked: number;
@@ -43,6 +45,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   isLoading,
   onImportFiles,
   onImportFolder,
+  onAutoCull,
+  canAutoCull,
   stats,
   onDeleteRejected,
   onDeleteOrphanRaw,
@@ -232,6 +236,15 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         >
           <i className={`fa-solid fa-folder-open text-sm ${isLoading ? 'animate-pulse' : ''}`}></i>
           <span className="hidden xl:inline ml-1.5 whitespace-nowrap">{t.buttons.importFolder}</span>
+        </button>
+        <button
+          onClick={onAutoCull}
+          disabled={isLoading || !canAutoCull}
+          className={`${iconBtnBase} ${isLoading || !canAutoCull ? iconBtnDisabled : ''} ${theme === 'dark' ? 'text-indigo-400 hover:bg-indigo-500/10' : 'text-indigo-600 hover:bg-indigo-50'}`}
+          title={t.autoCull.description}
+        >
+          <i className="fa-solid fa-wand-magic-sparkles text-sm" aria-hidden="true"></i>
+          <span className="ml-1.5 whitespace-nowrap">{t.autoCull.button}</span>
         </button>
 
         {/* Divider */}

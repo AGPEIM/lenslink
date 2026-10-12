@@ -3,6 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Keep bundled model telemetry offline while allowing local assets and Tauri IPC. -->
+    <meta http-equiv="Content-Security-Policy" content="connect-src 'self' ipc: asset: http://ipc.localhost http://asset.localhost ws://127.0.0.1:* ws://localhost:*" />
     <title>LensLink - RAW + JPG Manager</title>
     <style>
       @keyframes fly-out-right {
