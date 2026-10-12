@@ -174,7 +174,7 @@ fn read_exif(file_path: String) -> Result<ExifData, String> {
     Ok(exif_data)
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn scan_folder(folder_path: String) -> Result<Vec<PhotoGroupInfo>, String> {
     let path = Path::new(&folder_path);
     
@@ -271,7 +271,7 @@ fn scan_folder(folder_path: String) -> Result<Vec<PhotoGroupInfo>, String> {
     Ok(result)
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn scan_files(file_paths: Vec<String>) -> Result<Vec<PhotoGroupInfo>, String> {
     let raw_extensions = vec!["ARW", "CR2", "NEF", "DNG", "ORF", "RAF", "SRW"];
     let mut groups: std::collections::HashMap<String, PhotoGroupInfo> = std::collections::HashMap::new();

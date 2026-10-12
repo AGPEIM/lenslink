@@ -38,30 +38,6 @@ function initWorkerPool() {
 
   for (let i = 0; i < MAX_WORKERS; i++) {
     const worker = new RawDecoderWorker();
-
-    worker.onmessage = (e: MessageEvent) => {
-      const { type, id, error, timing } = e.data;
-
-      if (type === 'success') {
-        console.log(`[RAW Worker] Decode success for ${id} in ${timing?.total.toFixed(1)}ms`);
-        // Worker is now available
-        availableWorkers.push(worker);
-        processNextRequest();
-      } else if (type === 'error') {
-        console.error(`[RAW Worker] Decode error for ${id}:`, error);
-        // Worker is now available
-        availableWorkers.push(worker);
-        processNextRequest();
-      }
-    };
-
-    worker.onerror = (error) => {
-      console.error('[RAW Worker] Worker error:', error);
-      // Worker is now available (even after error)
-      availableWorkers.push(worker);
-      processNextRequest();
-    };
-
     workerPool.push(worker);
     availableWorkers.push(worker);
   }
@@ -81,34 +57,46 @@ function processNextRequest() {
 
   const requestId = request.filePath + (request.thumbnail ? '_thumb' : '_full');
 
+  const finish = (error?: Error, dataUrl?: string, replace = false) => {
+    clearTimeout(timer);
+    worker.removeEventListener('message', handleMessage);
+    worker.removeEventListener('error', handleError);
+    if (replace) {
+      worker.terminate();
+      const replacement = new RawDecoderWorker();
+      workerPool[workerPool.indexOf(worker)] = replacement;
+      availableWorkers.push(replacement);
+    } else {
+      availableWorkers.push(worker);
+    }
+    if (error) request.reject(error); else request.resolve(dataUrl!);
+    processNextRequest();
+  };
+  const handleError = () => finish(new Error('RAW decoder failed'), undefined, true);
+  const timer = setTimeout(() => finish(new Error('RAW decoding timed out'), undefined, true), 60000);
+
   // Set up one-time message handler for this specific request
   const handleMessage = (e: MessageEvent) => {
     const { type, id, dataUrl, error } = e.data;
 
     if (id !== requestId) return; // Not our message
 
-    worker.removeEventListener('message', handleMessage);
-
     if (type === 'success' && dataUrl) {
-      request.resolve(dataUrl);
-    } else if (type === 'error') {
-      request.reject(new Error(error || 'Unknown worker error'));
+      finish(undefined, dataUrl);
+    } else {
+      finish(new Error(error || 'Invalid RAW decoder response'));
     }
-
-    // Worker is now available
-    availableWorkers.push(worker);
-    processNextRequest();
   };
 
   worker.addEventListener('message', handleMessage);
+  worker.addEventListener('error', handleError);
 
   // Send decode request to worker
-  worker.postMessage({
-    type: 'decode',
-    id: requestId,
-    fileBuffer: request.fileBuffer,
-    thumbnail: request.thumbnail,
-  });
+  try {
+    worker.postMessage({ type: 'decode', id: requestId, fileBuffer: request.fileBuffer, thumbnail: request.thumbnail });
+  } catch (error) {
+    finish(error instanceof Error ? error : new Error(String(error)), undefined, true);
+  }
 }
 
 // Decode using worker pool
@@ -353,6 +341,12 @@ export function clearRawCache() {
   cacheAccessOrder.length = 0;
   thumbnailAccessOrder.length = 0;
   console.log('[RAW Cache] All caches cleared');
+}
+
+export function releaseRawImage(filePath: string) {
+  rawImageCache.delete(filePath);
+  const index = cacheAccessOrder.indexOf(filePath);
+  if (index !== -1) cacheAccessOrder.splice(index, 1);
 }
 
 /**

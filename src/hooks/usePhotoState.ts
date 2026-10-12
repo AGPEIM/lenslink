@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
-import { PhotoGroup, SelectionState, GroupStatus } from '../types';
+import { PhotoGroup, SelectionState, GroupStatus, AutoCullResult } from '../types';
+import { applyCullResult, photoSourceKey } from '../utils/cullingMetrics';
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
 import { convertFileSrc } from '@tauri-apps/api/core';
@@ -169,6 +170,10 @@ export function usePhotoState() {
   // Update photo rating
   const updatePhotoRating = useCallback((photoId: string, rating: number) => {
     setPhotos(prev => prev.map(p => p.id === photoId ? { ...p, rating: Math.max(0, Math.min(5, rating)) } : p));
+  }, []);
+
+  const updatePhotoAnalysis = useCallback((source: string, result: AutoCullResult) => {
+    setPhotos(prev => prev.map(photo => photoSourceKey(photo) === source ? applyCullResult(photo, result) : photo));
   }, []);
 
   // Delete rejected photos
@@ -415,6 +420,7 @@ export function usePhotoState() {
     importFolder,
     updatePhotoSelection,
     updatePhotoRating,
+    updatePhotoAnalysis,
     deleteRejectedPhotos,
     deleteOrphanPhotos,
     forceDeletePhotos,

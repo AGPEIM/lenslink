@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, memo } from 'react';
 import { PhotoGroup } from '../types';
 import { decodeRawFile, getThumbnailFromCache } from '../utils/rawLoader';
+import { loadJpgThumbnail } from '../utils/thumbnailLoader';
 
 interface LazyThumbnailProps {
   group: PhotoGroup;
@@ -17,7 +18,6 @@ const LazyThumbnail: React.FC<LazyThumbnailProps> = memo(({ group, isVisible = f
   const [hasError, setHasError] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const [inView, setInView] = useState(isVisible);
-  const loadedRef = useRef(false);
 
   // IntersectionObserver 检测可见性
   useEffect(() => {
@@ -46,47 +46,28 @@ const LazyThumbnail: React.FC<LazyThumbnailProps> = memo(({ group, isVisible = f
 
   // 加载缩略图
   useEffect(() => {
-    if (!inView || loadedRef.current) return;
-
-    // 如果有 JPG，直接使用
-    if (group.jpg?.previewUrl) {
-      setThumbnailUrl(group.jpg.previewUrl);
-      loadedRef.current = true;
-      return;
-    }
-
-    // 如果只有 RAW，先检查缓存
-    if (group.raw?.path) {
-      // 先尝试从缓存获取
-      const cachedThumbnail = getThumbnailFromCache(group.raw.path);
-      if (cachedThumbnail) {
-        setThumbnailUrl(cachedThumbnail);
-        loadedRef.current = true;
-        return;
-      }
-
-      // 缓存未命中，开始解码
-      setIsLoading(true);
-      decodeRawFile(group.raw.path, true) // true = thumbnail mode
-        .then((dataUrl) => {
-          setThumbnailUrl(dataUrl);
-          loadedRef.current = true;
-          setIsLoading(false);
-        })
-        .catch((error) => {
-          console.error('Failed to load RAW thumbnail:', error);
-          setHasError(true);
-          setIsLoading(false);
-        });
-    }
-  }, [inView, group.id, group.jpg, group.raw]);
-
-  // 组件重置时（group.id 改变）重置状态
-  useEffect(() => {
-    loadedRef.current = false;
+    const controller = new AbortController();
     setThumbnailUrl(null);
     setHasError(false);
-  }, [group.id]);
+    if (!inView) return;
+    const jpgUrl = group.jpg?.previewUrl;
+    const rawPath = group.raw?.path;
+    const cached = rawPath && !jpgUrl ? getThumbnailFromCache(rawPath) : null;
+    if (cached) { setThumbnailUrl(cached); setIsLoading(false); return; }
+    if (!jpgUrl && !rawPath) return;
+    setIsLoading(true);
+    const loading = jpgUrl ? loadJpgThumbnail(jpgUrl, controller.signal) : decodeRawFile(rawPath!, true);
+    loading.then(url => {
+      if (!controller.signal.aborted) { setThumbnailUrl(url); setIsLoading(false); }
+    }).catch(error => {
+      if (!controller.signal.aborted) {
+        console.error('Failed to load thumbnail:', error);
+        setHasError(true);
+        setIsLoading(false);
+      }
+    });
+    return () => controller.abort();
+  }, [inView, group.jpg?.previewUrl, group.raw?.path]);
 
   return (
     <div ref={containerRef} className="w-full h-full">
@@ -104,6 +85,7 @@ const LazyThumbnail: React.FC<LazyThumbnailProps> = memo(({ group, isVisible = f
           className="w-full h-full object-cover"
           alt={group.id}
           loading="lazy"
+          decoding="async"
         />
       ) : (
         <div className="w-full h-full bg-zinc-800 flex items-center justify-center">

@@ -2,6 +2,28 @@ export const translations = {
   zh: {
     // 应用标题
     appName: 'LensLink Pro',
+    autoCull: {
+      button: '自动筛选',
+      description: '本地检测闭眼和人物失焦，仅标记废片，不删除文件。',
+      loadingModel: '正在加载本地检测模型…',
+      stop: '停止筛选',
+      stopped: '筛选已停止，已完成的标记保留。',
+      completed: '自动筛选完成',
+      processed: '已检查',
+      rejected: '标记废片',
+      skipped: '未检测到可判断的人脸',
+      failed: '读取或检测失败',
+      startFailed: '本地检测启动失败',
+      review: '请在“待删除”中复核。故意闭眼、柔焦可能被误标；小人脸或遮挡可能漏检。',
+      title: '自动筛选结果',
+      closed_eyes: '疑似闭眼或半闭眼',
+      out_of_focus: '疑似人物失焦',
+      analyzed: '未发现明显闭眼或失焦',
+      no_face: '未检测到人脸，未自动标记',
+      uncertain: '人脸过小或不清楚，未自动标记',
+      error: '检测失败，未自动标记',
+      face: '人物',
+    },
     
     // 导航栏 - 过滤器
     filters: {
@@ -297,6 +319,28 @@ export const translations = {
   en: {
     // Application title
     appName: 'LensLink Pro',
+    autoCull: {
+      button: 'Auto Cull',
+      description: 'Detect closed eyes and soft faces locally. Mark rejects without deleting files.',
+      loadingModel: 'Loading the local detection model…',
+      stop: 'Stop screening',
+      stopped: 'Screening stopped. Completed marks are kept.',
+      completed: 'Automatic screening completed',
+      processed: 'Checked',
+      rejected: 'Marked as rejects',
+      skipped: 'No assessable face detected',
+      failed: 'Read or detection errors',
+      startFailed: 'Cannot start local detection',
+      review: 'Review Rejects before deleting. Intentional closed eyes or soft focus may be flagged; small or obscured faces may be missed.',
+      title: 'Automatic screening result',
+      closed_eyes: 'Possibly closed or half-closed eyes',
+      out_of_focus: 'Possibly out of focus',
+      analyzed: 'No obvious closed eyes or soft focus found',
+      no_face: 'No face detected; no automatic mark',
+      uncertain: 'Face too small or unclear; no automatic mark',
+      error: 'Detection failed; no automatic mark',
+      face: 'Person',
+    },
     
     // Navigation bar - Filters
     filters: {

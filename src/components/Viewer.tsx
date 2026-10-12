@@ -217,6 +217,7 @@ const Viewer: React.FC<ViewerProps> = ({ group, animationClass, onUpdateSelectio
                 src={displayUrl}
                 alt={group.id}
                 draggable={false}
+                decoding="async"
                 className={`max-w-full max-h-[calc(100vh-8rem)] w-auto h-auto object-contain shadow-[0_0_100px_rgba(0,0,0,0.5)] rounded-sm select-none transition-opacity duration-200 ${imageReady ? 'opacity-100' : 'opacity-0'}`}
               />
             ) : isLoadingRaw && !displayUrl ? (
@@ -361,6 +362,19 @@ const Viewer: React.FC<ViewerProps> = ({ group, animationClass, onUpdateSelectio
             </span>
           </div>
         </section>
+
+        {group.autoCull && (
+          <section className={`rounded-lg border p-3 text-sm space-y-2 ${group.autoCull.issues.length ? 'border-rose-500/40 text-rose-400 bg-rose-500/5' : theme === 'dark' ? 'border-zinc-700 text-zinc-400' : 'border-gray-200 text-gray-600'}`}>
+            <h3 className="font-semibold">{t.autoCull.title}</h3>
+            <p>{group.autoCull.issues.length ? group.autoCull.issues.map(issue => t.autoCull[issue]).join(' · ') : t.autoCull[group.autoCull.status]}</p>
+            {group.autoCull.faces.filter(face => face.analyzable).map(face => (
+              <p key={face.index} className="text-xs">
+                {t.autoCull.face} {face.index}: {[face.closedEyes && t.autoCull.closed_eyes, face.outOfFocus && t.autoCull.out_of_focus].filter(Boolean).join(' · ') || (language === 'zh' ? '未发现明显问题' : 'No obvious issue')}
+              </p>
+            ))}
+            {group.autoCull.error && <p className="text-xs break-words">{group.autoCull.error}</p>}
+          </section>
+        )}
 
         <section className="grid grid-cols-2 gap-3">
           <ExifTile icon="fa-stopwatch" label={t.viewer.exif.shutter} value={group.exif?.shutterSpeed} theme={theme} />
