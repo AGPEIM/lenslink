@@ -42,6 +42,7 @@ const Viewer: React.FC<ViewerProps> = ({ group, animationClass, onUpdateSelectio
       return;
     }
     currentGroupId.current = group.id;
+    setNextUrl(null);
 
     // 如果有 JPG，直接使用（不需要闪烁处理）
     if (group.jpg) {
@@ -78,6 +79,7 @@ const Viewer: React.FC<ViewerProps> = ({ group, animationClass, onUpdateSelectio
         .catch(error => {
           console.error('Failed to load RAW preview:', error);
           if (currentGroupId.current === group.id) {
+            setDisplayUrl(null);
             setRawError(error.message || 'Failed to decode RAW file');
             setIsLoadingRaw(false);
           }
@@ -95,14 +97,27 @@ const Viewer: React.FC<ViewerProps> = ({ group, animationClass, onUpdateSelectio
   useEffect(() => {
     if (nextUrl) {
       // 预加载新图片
+      const loadingGroupId = currentGroupId.current;
       const img = new Image();
       img.onload = () => {
+        if (currentGroupId.current !== loadingGroupId) return;
         setDisplayUrl(nextUrl);
         setNextUrl(null);
         setIsLoadingRaw(false);
         setImageReady(true);
       };
+      img.onerror = () => {
+        if (currentGroupId.current !== loadingGroupId) return;
+        setDisplayUrl(null);
+        setNextUrl(null);
+        setIsLoadingRaw(false);
+        setRawError('Failed to load decoded RAW image');
+      };
       img.src = nextUrl;
+      return () => {
+        img.onload = null;
+        img.onerror = null;
+      };
     }
   }, [nextUrl]);
 

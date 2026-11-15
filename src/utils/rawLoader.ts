@@ -18,110 +18,103 @@ const thumbnailAccessOrder: string[] = [];
 // Track ongoing decode operations to prevent duplicate work
 const ongoingDecodes = new Map<string, Promise<string>>();
 
-// Worker pool management
+// Read and decode only when a worker slot is available. Queued requests retain
+// paths, not entire RAW files, so a large import cannot read gigabytes at once.
 const MAX_WORKERS = Math.min(navigator.hardwareConcurrency || 4, 4);
+const DECODE_TIMEOUT_MS = 60_000;
 const workerPool: Worker[] = [];
 const availableWorkers: Worker[] = [];
-const pendingRequests: Array<{
+interface DecodeJob {
   resolve: (value: string) => void;
-  reject: (reason: any) => void;
+  reject: (reason: Error) => void;
   filePath: string;
-  fileBuffer: ArrayBuffer;
   thumbnail: boolean;
-}> = [];
+}
+const pendingRequests: DecodeJob[] = [];
+let nextRequestId = 0;
 
-// Initialize worker pool
-function initWorkerPool() {
-  if (workerPool.length > 0) return; // Already initialized
+function asError(error: unknown): Error {
+  return error instanceof Error ? error : new Error(String(error));
+}
 
-  console.log(`[RAW Worker] Initializing worker pool with ${MAX_WORKERS} workers`);
-
-  for (let i = 0; i < MAX_WORKERS; i++) {
-    const worker = new RawDecoderWorker();
-
-    worker.onmessage = (e: MessageEvent) => {
-      const { type, id, error, timing } = e.data;
-
-      if (type === 'success') {
-        console.log(`[RAW Worker] Decode success for ${id} in ${timing?.total.toFixed(1)}ms`);
-        // Worker is now available
-        availableWorkers.push(worker);
-        processNextRequest();
-      } else if (type === 'error') {
-        console.error(`[RAW Worker] Decode error for ${id}:`, error);
-        // Worker is now available
-        availableWorkers.push(worker);
-        processNextRequest();
+function processNextRequest() {
+  while (pendingRequests.length > 0) {
+    let worker = availableWorkers.shift();
+    if (!worker) {
+      if (workerPool.length >= MAX_WORKERS) return;
+      try {
+        worker = new RawDecoderWorker();
+        workerPool.push(worker);
+      } catch (error) {
+        // There may be no live worker left to wake this queue after a startup
+        // failure. Settle every waiting request; a subsequent request can retry.
+        for (const request of pendingRequests.splice(0)) request.reject(asError(error));
+        return;
       }
-    };
-
-    worker.onerror = (error) => {
-      console.error('[RAW Worker] Worker error:', error);
-      // Worker is now available (even after error)
-      availableWorkers.push(worker);
-      processNextRequest();
-    };
-
-    workerPool.push(worker);
-    availableWorkers.push(worker);
+    }
+    startRequest(worker, pendingRequests.shift()!);
   }
 }
 
-// Process next pending request if workers are available
-function processNextRequest() {
-  if (pendingRequests.length === 0 || availableWorkers.length === 0) {
-    return;
-  }
-
-  const request = pendingRequests.shift();
-  if (!request) return;
-
-  const worker = availableWorkers.shift();
-  if (!worker) return;
-
-  const requestId = request.filePath + (request.thumbnail ? '_thumb' : '_full');
-
-  // Set up one-time message handler for this specific request
-  const handleMessage = (e: MessageEvent) => {
-    const { type, id, dataUrl, error } = e.data;
-
-    if (id !== requestId) return; // Not our message
-
+function startRequest(worker: Worker, request: DecodeJob) {
+  const requestId = `raw-${++nextRequestId}`;
+  let settled = false;
+  const finish = (error?: Error, dataUrl?: string, replace = false) => {
+    if (settled) return;
+    settled = true;
+    clearTimeout(timer);
     worker.removeEventListener('message', handleMessage);
-
-    if (type === 'success' && dataUrl) {
-      request.resolve(dataUrl);
-    } else if (type === 'error') {
-      request.reject(new Error(error || 'Unknown worker error'));
+    worker.removeEventListener('error', handleError);
+    worker.removeEventListener('messageerror', handleMessageError);
+    if (replace) {
+      worker.terminate();
+      workerPool.splice(workerPool.indexOf(worker), 1);
+    } else {
+      availableWorkers.push(worker);
     }
-
-    // Worker is now available
-    availableWorkers.push(worker);
+    if (error) request.reject(error);
+    else request.resolve(dataUrl!);
     processNextRequest();
   };
-
+  const handleMessage = (event: MessageEvent) => {
+    const response = event.data;
+    if (!response || response.id !== requestId) return;
+    if (response.type === 'success' && typeof response.dataUrl === 'string' && response.dataUrl) {
+      finish(undefined, response.dataUrl);
+    } else if (response.type === 'error') {
+      finish(new Error(typeof response.error === 'string' ? response.error : 'RAW decoding failed'));
+    } else {
+      finish(new Error('Invalid RAW decoder response'), undefined, true);
+    }
+  };
+  const handleError = (event: ErrorEvent) => {
+    event.preventDefault();
+    finish(new Error(event.message || 'RAW decoder worker failed'), undefined, true);
+  };
+  const handleMessageError = () => finish(new Error('Cannot read RAW decoder response'), undefined, true);
+  const timer = setTimeout(() => finish(new Error('RAW decoding timed out'), undefined, true), DECODE_TIMEOUT_MS);
   worker.addEventListener('message', handleMessage);
+  worker.addEventListener('error', handleError);
+  worker.addEventListener('messageerror', handleMessageError);
 
-  // Send decode request to worker
-  worker.postMessage({
-    type: 'decode',
-    id: requestId,
-    fileBuffer: request.fileBuffer,
-    thumbnail: request.thumbnail,
-  });
+  // The timeout also covers file reads. A read that finishes after cancellation
+  // must never post into a terminated worker or one serving a newer request.
+  void (async () => {
+    try {
+      const bytes = await readFile(request.filePath);
+      if (settled) return;
+      const fileBuffer = (bytes.byteOffset === 0 && bytes.byteLength === bytes.buffer.byteLength
+        ? bytes.buffer : bytes.slice().buffer) as ArrayBuffer;
+      worker.postMessage({ type: 'decode', id: requestId, fileBuffer, thumbnail: request.thumbnail }, [fileBuffer]);
+    } catch (error) {
+      finish(asError(error), undefined, true);
+    }
+  })();
 }
 
-// Decode using worker pool
-function decodeWithWorker(filePath: string, fileBuffer: ArrayBuffer, thumbnail: boolean): Promise<string> {
+function decodeWithWorker(filePath: string, thumbnail: boolean): Promise<string> {
   return new Promise((resolve, reject) => {
-    pendingRequests.push({
-      resolve,
-      reject,
-      filePath,
-      fileBuffer,
-      thumbnail,
-    });
-
+    pendingRequests.push({ resolve, reject, filePath, thumbnail });
     processNextRequest();
   });
 }
@@ -213,9 +206,6 @@ export function preloadRawFile(filePath: string): void {
 export async function decodeRawFile(filePath: string, thumbnail: boolean = false): Promise<string> {
   const startTime = performance.now();
 
-  // Initialize worker pool on first use
-  initWorkerPool();
-
   // Check thumbnail cache first (if requesting thumbnail)
   if (thumbnail && thumbnailCache.has(filePath)) {
     touchCache(filePath, true);
@@ -262,15 +252,7 @@ export async function decodeRawFile(filePath: string, thumbnail: boolean = false
   // Start new decode operation using worker
   const decodePromise = (async () => {
     try {
-      // Read the file using Tauri's filesystem API
-      const t1 = performance.now();
-      const fileBuffer = await readFile(filePath);
-      console.log(`[RAW] File read: ${(performance.now() - t1).toFixed(1)}ms (${(fileBuffer.length / 1024 / 1024).toFixed(2)}MB)`);
-
-      // Decode using worker (always decode full size first)
-      const t2 = performance.now();
-      const dataUrl = await decodeWithWorker(filePath, fileBuffer.buffer, false);
-      console.log(`[RAW Worker] Total decode time: ${(performance.now() - t2).toFixed(1)}ms`);
+      const dataUrl = await decodeWithWorker(filePath, false);
 
       // Cache the full-size result with LRU eviction
       evictLRUCache();
