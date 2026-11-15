@@ -1,4 +1,19 @@
-import LibRaw from 'libraw-wasm';
+// The public libraw-wasm client starts another Worker. Nested worker scripts
+// fail to load through WebView2's packaged tauri.localhost resource handler.
+// Run the WASM module in this existing worker instead (tauri-apps/tauri#15755).
+import createLibRawModule, { type LibRawDecoder } from 'libraw-wasm/dist/libraw.js';
+
+let modulePromise: ReturnType<typeof createLibRawModule> | undefined;
+
+function getLibRawModule() {
+  if (!modulePromise) {
+    modulePromise = createLibRawModule().catch(error => {
+      modulePromise = undefined;
+      throw error;
+    });
+  }
+  return modulePromise;
+}
 
 // Worker message types
 interface DecodeRequest {
@@ -37,10 +52,12 @@ self.onmessage = async (e: MessageEvent<DecodeRequest>) => {
     conversion: 0,
   };
 
+  let raw: LibRawDecoder | undefined;
   try {
     // Initialize LibRaw
     const t1 = performance.now();
-    const raw = new LibRaw();
+    const module = await getLibRawModule();
+    raw = new module.LibRaw();
     timing.fileRead = performance.now() - t1;
 
     // Configure settings for fast decoding
@@ -57,17 +74,19 @@ self.onmessage = async (e: MessageEvent<DecodeRequest>) => {
 
     // Decode the RAW file
     const t2 = performance.now();
-    await raw.open(new Uint8Array(fileBuffer), settings);
+    raw.open(new Uint8Array(fileBuffer), settings);
     timing.decode = performance.now() - t2;
 
     // Get image data
     const t3 = performance.now();
-    const imageData = await raw.imageData();
-    const metadata = await raw.metadata(false);
+    const imageData = raw.imageData();
+    const metadata = raw.metadata(false);
 
     // Extract pixel data
     let pixelData: Uint8Array | number[] | undefined;
-    if (imageData && typeof imageData === 'object') {
+    if (imageData instanceof Uint8Array) {
+      pixelData = imageData;
+    } else if (imageData && typeof imageData === 'object') {
       pixelData = (imageData as any).data || (imageData as any).buffer || (imageData as any).pixels;
       if (!pixelData && imageData.length !== undefined) {
         pixelData = imageData as any;
@@ -84,6 +103,9 @@ self.onmessage = async (e: MessageEvent<DecodeRequest>) => {
 
     if (!width || !height) {
       throw new Error(`Invalid dimensions: ${width}x${height}`);
+    }
+    if (pixelData.length < width * height * 3) {
+      throw new Error('Incomplete RGB image data returned from RAW decoder');
     }
 
     // Create canvas for rendering
@@ -166,6 +188,10 @@ self.onmessage = async (e: MessageEvent<DecodeRequest>) => {
       error: error instanceof Error ? error.message : 'Unknown error',
     };
     self.postMessage(response);
+  } finally {
+    // Release the native decoder and its image buffers between files. The
+    // worker keeps only the reusable WASM module, not a new child worker/file.
+    raw?.delete();
   }
 };
 
